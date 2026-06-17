@@ -1,0 +1,6 @@
+@JiraIntegrationService.Api_HostAddress = http://localhost:5016
+
+GET {{JiraIntegrationService.Api_HostAddress}}/health
+Accept: application/json
+
+###

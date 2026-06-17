@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/JiraIntegrationService.Api/JiraIntegrationService.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/JiraIntegrationService.Tests/JiraIntegrationService.Tests.csproj" />
+  </Folder>
+</Solution>

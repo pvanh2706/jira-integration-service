@@ -1,0 +1,375 @@
+{
+  "info": {
+    "_postman_id": "a6b0f62f-9f0d-42b8-8d27-9c27ad3c0a02",
+    "name": "Jira Integration Service",
+    "description": "Postman collection for Jira Integration Service. Business and admin endpoints use X-Internal-Auth.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "GET /api/admin/products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/products"
+          }
+        },
+        {
+          "name": "POST /api/admin/products",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{adminProductCode}}\",\n  \"name\": \"{{adminProductName}}\",\n  \"jiraProjectKey\": \"{{adminJiraProjectKey}}\",\n  \"jiraBaseUrl\": \"{{adminJiraBaseUrl}}\",\n  \"jiraApiBasePath\": \"/rest/api/2\",\n  \"jiraVersion\": \"ServerV2\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/admin/products"
+          }
+        },
+        {
+          "name": "PUT /api/admin/products/{code}/credential",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authType\": \"Basic\",\n  \"username\": \"{{adminJiraUsername}}\",\n  \"passwordOrToken\": \"{{adminJiraPasswordOrToken}}\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/admin/products/{{adminProductCode}}/credential"
+          }
+        },
+        {
+          "name": "POST /api/admin/products/{code}/issue-types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueTypeCode\": \"{{adminIssueTypeCode}}\",\n  \"jiraIssueTypeName\": \"Task\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/admin/products/{{adminProductCode}}/issue-types"
+          }
+        },
+        {
+          "name": "POST /api/admin/products/{code}/issue-types/{issueTypeCode}/field-mappings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourcePath\": \"data.summary\",\n  \"jiraField\": \"summary\",\n  \"valueType\": \"string\",\n  \"valueShape\": \"raw\",\n  \"isRequired\": true,\n  \"sortOrder\": 10,\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/admin/products/{{adminProductCode}}/issue-types/{{adminIssueTypeCode}}/field-mappings"
+          }
+        },
+        {
+          "name": "POST /api/admin/products/{code}/validate-create-issue-config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueTypeCode\": \"{{adminIssueTypeCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/admin/products/{{adminProductCode}}/validate-create-issue-config"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Issues",
+      "item": [
+        {
+          "name": "POST /api/issues/create",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data) {",
+                  "  pm.collectionVariables.set('jiraIssueId', json.data.jiraIssueId || '');",
+                  "  pm.collectionVariables.set('jiraIssueKey', json.data.jiraIssueKey || '');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"{{productCode}}\",\n  \"issueTypeCode\": \"{{issueTypeCode}}\",\n  \"data\": {\n    \"summary\": \"{{issueSummary}}\",\n    \"description\": \"{{issueDescription}}\",\n    \"priority\": \"{{priority}}\",\n    \"customer\": {\n      \"code\": \"{{customerCode}}\"\n    },\n    \"ticket\": {\n      \"url\": \"{{ticketUrl}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/issues/create"
+          }
+        },
+        {
+          "name": "POST /api/issues/status/update",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productCode\": \"{{productCode}}\",\n  \"jiraIssueId\": \"{{jiraIssueId}}\",\n  \"jiraIssueKey\": \"{{jiraIssueKey}}\",\n  \"issueTypeCode\": \"{{issueTypeCode}}\",\n  \"standardStatus\": \"{{standardStatus}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/issues/status/update"
+          }
+        },
+        {
+          "name": "GET /api/issues/status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Internal-Auth",
+                "value": "{{internalAuthToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/issues/status?productCode={{productCode}}&jiraIssueId={{jiraIssueId}}&jiraIssueKey={{jiraIssueKey}}&issueTypeCode={{issueTypeCode}}"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5016"
+    },
+    {
+      "key": "internalAuthToken",
+      "value": "dev-internal-token"
+    },
+    {
+      "key": "productCode",
+      "value": "CRM"
+    },
+    {
+      "key": "issueTypeCode",
+      "value": "BUG"
+    },
+    {
+      "key": "issueSummary",
+      "value": "Customer cannot submit order"
+    },
+    {
+      "key": "issueDescription",
+      "value": "Error occurs after clicking submit."
+    },
+    {
+      "key": "priority",
+      "value": "High"
+    },
+    {
+      "key": "customerCode",
+      "value": "CUST-001"
+    },
+    {
+      "key": "ticketUrl",
+      "value": "https://example.test/tickets/CRM-TICKET-123"
+    },
+    {
+      "key": "jiraIssueId",
+      "value": ""
+    },
+    {
+      "key": "jiraIssueKey",
+      "value": "CRM-123"
+    },
+    {
+      "key": "standardStatus",
+      "value": "IN_PROGRESS"
+    },
+    {
+      "key": "adminProductCode",
+      "value": "OPS"
+    },
+    {
+      "key": "adminProductName",
+      "value": "Operations"
+    },
+    {
+      "key": "adminJiraProjectKey",
+      "value": "OPS"
+    },
+    {
+      "key": "adminJiraBaseUrl",
+      "value": "https://jira-ops.example.com"
+    },
+    {
+      "key": "adminJiraUsername",
+      "value": "jira-ops-user"
+    },
+    {
+      "key": "adminJiraPasswordOrToken",
+      "value": "change-me"
+    },
+    {
+      "key": "adminIssueTypeCode",
+      "value": "INCIDENT"
+    }
+  ]
+}
