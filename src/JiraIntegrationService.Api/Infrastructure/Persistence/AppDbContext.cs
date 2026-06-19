@@ -169,10 +169,10 @@ public sealed class AppDbContext : DbContext
             new Product
             {
                 Id = 1,
-                Code = "CRM",
-                Name = "CRM",
-                JiraProjectKey = "CRM",
-                JiraBaseUrl = "https://jira.example.com",
+                Code = "EAS",
+                Name = "EAS",
+                JiraProjectKey = "EAS",
+                JiraBaseUrl = "https://jira.ezcloudhotel.com",
                 JiraApiBasePath = "/rest/api/2",
                 JiraVersion = "ServerV2",
                 IsActive = true,
@@ -186,8 +186,8 @@ public sealed class AppDbContext : DbContext
                 Id = 1,
                 ProductId = 1,
                 AuthType = "Basic",
-                Username = "jira-crm-user",
-                PasswordOrToken = "change-me",
+                Username = "anh.phamviet",
+                PasswordOrToken = "123456Aa@",
                 IsActive = true,
                 CreatedAt = SeedTimestamp,
                 UpdatedAt = SeedTimestamp
