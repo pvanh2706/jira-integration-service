@@ -1,0 +1,3 @@
+curl --location 'https://jira.ezcloudhotel.com/rest/api/2/issue/createmeta/EAS/issuetypes/6' \
+--header 'Accept: application/json' \
+--header 'Authorization: Basic YW5oLnBoYW12aWV0OjEyMzQ1NkFhQA=='

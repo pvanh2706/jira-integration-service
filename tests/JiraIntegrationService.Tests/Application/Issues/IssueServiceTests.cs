@@ -75,6 +75,7 @@ public sealed class IssueServiceTests
         {
             ProductCode = " crm ",
             IssueTypeCode = " bug ",
+            TemplateCode = "support_fast",
             Data = Data(new
             {
                 summary = " Customer cannot submit order ",
@@ -89,19 +90,18 @@ public sealed class IssueServiceTests
 
         Assert.Equal("10001", result.JiraIssueId);
         Assert.Equal("CRM-123", result.JiraIssueKey);
+        Assert.Equal("support_fast", configService.CapturedTemplateCode);
 
         var capturedRequest = Assert.IsType<CreateJiraIssueRequest>(jiraClient.CapturedCreateRequest);
         Assert.Equal("CRM", capturedRequest.ProjectKey);
         Assert.Equal("Bug", capturedRequest.IssueTypeName);
         Assert.Equal("Customer cannot submit order", capturedRequest.Summary);
-        Assert.Null(capturedRequest.Description);
+        Assert.Equal("Error occurs after submit.", capturedRequest.Description);
+        Assert.Equal("High", capturedRequest.PriorityName);
         Assert.Equal("10001", capturedRequest.IssueTypeId);
         Assert.Equal("https://jira.example.com", jiraClient.CapturedConnection!.BaseUrl);
         Assert.Equal("Basic", jiraClient.CapturedConnection.AuthType);
         Assert.NotNull(capturedRequest.CustomFields);
-        Assert.Equal("Error occurs after submit.", capturedRequest.CustomFields!["description"]);
-        var priority = Assert.IsType<Dictionary<string, object?>>(capturedRequest.CustomFields["priority"]);
-        Assert.Equal("High", priority["name"]);
         Assert.Equal("CUST-001", capturedRequest.CustomFields!["customfield_10010"]);
         Assert.Equal("DEFAULT-SOURCE", capturedRequest.CustomFields!["customfield_10011"]);
     }
@@ -537,6 +537,8 @@ public sealed class IssueServiceTests
 
         public string? CapturedMapIssueTypeCode { get; private set; }
 
+        public string? CapturedTemplateCode { get; private set; }
+
         public string? CapturedJiraStatusName { get; private set; }
 
         public StatusTransitionConfig StatusTransition { get; init; } = new(
@@ -596,6 +598,16 @@ public sealed class IssueServiceTests
             string? issueTypeCode,
             CancellationToken cancellationToken = default)
         {
+            return Task.FromResult(FieldMappings);
+        }
+
+        public Task<IReadOnlyList<FieldMappingConfig>> GetFieldMappingsByTemplateAsync(
+            string productCode,
+            string issueTypeCode,
+            string? templateCode,
+            CancellationToken cancellationToken = default)
+        {
+            CapturedTemplateCode = templateCode;
             return Task.FromResult(FieldMappings);
         }
 
@@ -678,6 +690,27 @@ public sealed class IssueServiceTests
             CapturedGetTransitionsIssueKey = jiraIssueKey;
 
             return Task.FromResult(AvailableTransitions);
+        }
+
+        public Task<IReadOnlyList<JiraIssueTypeResponse>> GetIssueTypesAsync(
+            JiraConnectionConfig connection,
+            string projectKey,
+            CancellationToken cancellationToken = default)
+        {
+            CapturedConnection = connection;
+
+            return Task.FromResult<IReadOnlyList<JiraIssueTypeResponse>>([]);
+        }
+
+        public Task<IReadOnlyList<JiraIssueFieldMetadataResponse>> GetIssueTypeFieldsAsync(
+            JiraConnectionConfig connection,
+            string projectKey,
+            string issueTypeId,
+            CancellationToken cancellationToken = default)
+        {
+            CapturedConnection = connection;
+
+            return Task.FromResult<IReadOnlyList<JiraIssueFieldMetadataResponse>>([]);
         }
 
         public Task TransitionIssueAsync(

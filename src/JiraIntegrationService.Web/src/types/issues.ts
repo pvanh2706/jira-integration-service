@@ -3,6 +3,7 @@ export type IssueData = Record<string, unknown>
 export interface CreateIssueRequest {
   productCode: string
   issueTypeCode: string
+  templateCode?: string
   data: IssueData
 }
 

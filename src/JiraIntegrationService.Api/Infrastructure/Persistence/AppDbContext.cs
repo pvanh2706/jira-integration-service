@@ -20,6 +20,10 @@ public sealed class AppDbContext : DbContext
 
     public DbSet<IssueFieldMapping> IssueFieldMappings => Set<IssueFieldMapping>();
 
+    public DbSet<IssueFieldMappingTemplate> IssueFieldMappingTemplates => Set<IssueFieldMappingTemplate>();
+
+    public DbSet<JiraIssueTypeFieldMetadata> JiraIssueTypeFieldMetadata => Set<JiraIssueTypeFieldMetadata>();
+
     public DbSet<StatusMapping> StatusMappings => Set<StatusMapping>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -27,7 +31,9 @@ public sealed class AppDbContext : DbContext
         ConfigureProducts(modelBuilder);
         ConfigureJiraCredentials(modelBuilder);
         ConfigureIssueTypeMappings(modelBuilder);
+        ConfigureIssueFieldMappingTemplates(modelBuilder);
         ConfigureIssueFieldMappings(modelBuilder);
+        ConfigureJiraIssueTypeFieldMetadata(modelBuilder);
         ConfigureStatusMappings(modelBuilder);
         SeedInitialConfiguration(modelBuilder);
     }
@@ -103,11 +109,22 @@ public sealed class AppDbContext : DbContext
         {
             mapping.ProductId,
             mapping.IssueTypeMappingId,
+            mapping.TemplateCode,
             mapping.SourcePath
         }).IsUnique();
 
+        entity.Property(mapping => mapping.TemplateCode).HasMaxLength(100).IsRequired();
         entity.Property(mapping => mapping.SourcePath).HasMaxLength(300).IsRequired();
         entity.Property(mapping => mapping.JiraField).HasMaxLength(200).IsRequired();
+        entity.Property(mapping => mapping.JiraFieldName).HasMaxLength(300);
+        entity.Property(mapping => mapping.JiraFieldDescription).HasMaxLength(2000);
+        entity.Property(mapping => mapping.JiraSchemaType).HasMaxLength(100);
+        entity.Property(mapping => mapping.JiraSchemaItems).HasMaxLength(100);
+        entity.Property(mapping => mapping.JiraSchemaSystem).HasMaxLength(100);
+        entity.Property(mapping => mapping.JiraSchemaCustom).HasMaxLength(300);
+        entity.Property(mapping => mapping.JiraAllowedValuesJson).HasMaxLength(20000);
+        entity.Property(mapping => mapping.JiraDefaultValueJson).HasMaxLength(4000);
+        entity.Property(mapping => mapping.JiraAutoCompleteUrl).HasMaxLength(1000);
         entity.Property(mapping => mapping.ValueType).HasMaxLength(50).IsRequired();
         entity.Property(mapping => mapping.ValueShape).HasMaxLength(50).IsRequired();
         entity.Property(mapping => mapping.DefaultValue).HasMaxLength(1000);
@@ -128,6 +145,85 @@ public sealed class AppDbContext : DbContext
             .HasOne(mapping => mapping.IssueTypeMapping)
             .WithMany(issueType => issueType.IssueFieldMappings)
             .HasForeignKey(mapping => mapping.IssueTypeMappingId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureIssueFieldMappingTemplates(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<IssueFieldMappingTemplate>();
+
+        entity.ToTable("IssueFieldMappingTemplates");
+
+        entity.HasKey(template => template.Id);
+        entity.HasIndex(template => new
+        {
+            template.ProductId,
+            template.IssueTypeMappingId,
+            template.TemplateCode
+        }).IsUnique();
+
+        entity.Property(template => template.TemplateCode).HasMaxLength(100).IsRequired();
+        entity.Property(template => template.Name).HasMaxLength(200).IsRequired();
+        entity.Property(template => template.Description).HasMaxLength(1000);
+        entity.Property(template => template.IsDefault).IsRequired();
+        entity.Property(template => template.IsActive).IsRequired();
+        entity.Property(template => template.CreatedAt).IsRequired();
+        entity.Property(template => template.UpdatedAt).IsRequired();
+
+        entity
+            .HasOne(template => template.Product)
+            .WithMany(product => product.IssueFieldMappingTemplates)
+            .HasForeignKey(template => template.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity
+            .HasOne(template => template.IssueTypeMapping)
+            .WithMany(issueType => issueType.IssueFieldMappingTemplates)
+            .HasForeignKey(template => template.IssueTypeMappingId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureJiraIssueTypeFieldMetadata(ModelBuilder modelBuilder)
+    {
+        var entity = modelBuilder.Entity<JiraIssueTypeFieldMetadata>();
+
+        entity.ToTable("JiraIssueTypeFieldMetadata");
+
+        entity.HasKey(metadata => metadata.Id);
+        entity.HasIndex(metadata => new
+        {
+            metadata.ProductId,
+            metadata.IssueTypeMappingId,
+            metadata.FieldId
+        }).IsUnique();
+
+        entity.Property(metadata => metadata.FieldId).HasMaxLength(200).IsRequired();
+        entity.Property(metadata => metadata.Name).HasMaxLength(300).IsRequired();
+        entity.Property(metadata => metadata.Required).IsRequired();
+        entity.Property(metadata => metadata.SchemaType).HasMaxLength(100);
+        entity.Property(metadata => metadata.SchemaItems).HasMaxLength(100);
+        entity.Property(metadata => metadata.SchemaSystem).HasMaxLength(100);
+        entity.Property(metadata => metadata.SchemaCustom).HasMaxLength(300);
+        entity.Property(metadata => metadata.HasDefaultValue).IsRequired();
+        entity.Property(metadata => metadata.DefaultValueJson).HasMaxLength(4000);
+        entity.Property(metadata => metadata.AutoCompleteUrl).HasMaxLength(1000);
+        entity.Property(metadata => metadata.OperationsJson).HasMaxLength(4000);
+        entity.Property(metadata => metadata.AllowedValuesJson).HasMaxLength(20000);
+        entity.Property(metadata => metadata.RecommendedValueType).HasMaxLength(50).IsRequired();
+        entity.Property(metadata => metadata.RecommendedValueShape).HasMaxLength(50).IsRequired();
+        entity.Property(metadata => metadata.CreatedAt).IsRequired();
+        entity.Property(metadata => metadata.UpdatedAt).IsRequired();
+
+        entity
+            .HasOne(metadata => metadata.Product)
+            .WithMany(product => product.JiraIssueTypeFieldMetadata)
+            .HasForeignKey(metadata => metadata.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        entity
+            .HasOne(metadata => metadata.IssueTypeMapping)
+            .WithMany(issueType => issueType.JiraFieldMetadata)
+            .HasForeignKey(metadata => metadata.IssueTypeMappingId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 
@@ -217,12 +313,41 @@ public sealed class AppDbContext : DbContext
                 UpdatedAt = SeedTimestamp
             });
 
+        modelBuilder.Entity<IssueFieldMappingTemplate>().HasData(
+            new IssueFieldMappingTemplate
+            {
+                Id = 1,
+                ProductId = 1,
+                IssueTypeMappingId = 1,
+                TemplateCode = "DEFAULT",
+                Name = "Default",
+                Description = "Default field mapping template.",
+                IsDefault = true,
+                IsActive = true,
+                CreatedAt = SeedTimestamp,
+                UpdatedAt = SeedTimestamp
+            },
+            new IssueFieldMappingTemplate
+            {
+                Id = 2,
+                ProductId = 1,
+                IssueTypeMappingId = 2,
+                TemplateCode = "DEFAULT",
+                Name = "Default",
+                Description = "Default field mapping template.",
+                IsDefault = true,
+                IsActive = true,
+                CreatedAt = SeedTimestamp,
+                UpdatedAt = SeedTimestamp
+            });
+
         modelBuilder.Entity<IssueFieldMapping>().HasData(
             new IssueFieldMapping
             {
                 Id = 1,
                 ProductId = 1,
                 IssueTypeMappingId = 1,
+                TemplateCode = "DEFAULT",
                 SourcePath = "data.summary",
                 JiraField = "summary",
                 ValueType = "string",
@@ -240,6 +365,7 @@ public sealed class AppDbContext : DbContext
                 Id = 2,
                 ProductId = 1,
                 IssueTypeMappingId = 1,
+                TemplateCode = "DEFAULT",
                 SourcePath = "data.description",
                 JiraField = "description",
                 ValueType = "string",
@@ -257,6 +383,7 @@ public sealed class AppDbContext : DbContext
                 Id = 3,
                 ProductId = 1,
                 IssueTypeMappingId = 1,
+                TemplateCode = "DEFAULT",
                 SourcePath = "data.priority",
                 JiraField = "priority",
                 ValueType = "string",
@@ -274,6 +401,7 @@ public sealed class AppDbContext : DbContext
                 Id = 4,
                 ProductId = 1,
                 IssueTypeMappingId = 1,
+                TemplateCode = "DEFAULT",
                 SourcePath = "data.customer.code",
                 JiraField = "customfield_10010",
                 ValueType = "string",
@@ -291,6 +419,7 @@ public sealed class AppDbContext : DbContext
                 Id = 5,
                 ProductId = 1,
                 IssueTypeMappingId = 1,
+                TemplateCode = "DEFAULT",
                 SourcePath = "data.ticket.url",
                 JiraField = "customfield_10011",
                 ValueType = "string",

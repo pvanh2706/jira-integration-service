@@ -8,28 +8,28 @@ namespace JiraIntegrationService.Tests.Infrastructure.Persistence;
 public sealed class AppDbContextTests
 {
     [Fact]
-    public async Task Products_ShouldSeedActiveCrmProduct()
+    public async Task Products_ShouldSeedActiveEasProduct()
     {
         await using var connection = await CreateOpenConnectionAsync();
         await using var dbContext = await CreateDbContextAsync(connection);
 
         var product = await dbContext.Products
             .AsNoTracking()
-            .SingleAsync(item => item.Code == "CRM");
+            .SingleAsync(item => item.Code == "EAS");
 
         Assert.True(product.IsActive);
-        Assert.Equal("CRM", product.JiraProjectKey);
+        Assert.Equal("EAS", product.JiraProjectKey);
     }
 
     [Fact]
-    public async Task IssueTypeMappings_ShouldSeedCrmBugMapping()
+    public async Task IssueTypeMappings_ShouldSeedEasBugMapping()
     {
         await using var connection = await CreateOpenConnectionAsync();
         await using var dbContext = await CreateDbContextAsync(connection);
 
         var product = await dbContext.Products
             .AsNoTracking()
-            .SingleAsync(item => item.Code == "CRM");
+            .SingleAsync(item => item.Code == "EAS");
 
         var mapping = await dbContext.IssueTypeMappings
             .AsNoTracking()
@@ -42,14 +42,14 @@ public sealed class AppDbContextTests
     }
 
     [Fact]
-    public async Task StatusMappings_ShouldSeedCrmInProgressMapping()
+    public async Task StatusMappings_ShouldSeedEasInProgressMapping()
     {
         await using var connection = await CreateOpenConnectionAsync();
         await using var dbContext = await CreateDbContextAsync(connection);
 
         var product = await dbContext.Products
             .AsNoTracking()
-            .SingleAsync(item => item.Code == "CRM");
+            .SingleAsync(item => item.Code == "EAS");
 
         var bugMapping = await dbContext.IssueTypeMappings
             .AsNoTracking()

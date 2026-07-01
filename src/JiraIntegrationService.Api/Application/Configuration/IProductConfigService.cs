@@ -22,6 +22,12 @@ public interface IProductConfigService
         string? issueTypeCode,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<FieldMappingConfig>> GetFieldMappingsByTemplateAsync(
+        string productCode,
+        string issueTypeCode,
+        string? templateCode,
+        CancellationToken cancellationToken = default);
+
     Task<StatusTransitionConfig> GetStatusTransitionAsync(
         string productCode,
         string? issueTypeCode,

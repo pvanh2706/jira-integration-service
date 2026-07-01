@@ -70,6 +70,24 @@
                 </el-select>
               </el-form-item>
             </el-col>
+            <el-col :xs="24" :md="12">
+              <el-form-item label="Template">
+                <el-select
+                  v-model="selectedTemplateCode"
+                  :disabled="!selectedIssueTypeCode"
+                  filterable
+                  placeholder="Select template"
+                  class="full-width"
+                >
+                  <el-option
+                    v-for="template in activeTemplates"
+                    :key="template.templateCode"
+                    :label="`${template.name} (${template.mappingCount})`"
+                    :value="template.templateCode"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
           </el-row>
         </el-form>
 
@@ -130,6 +148,7 @@ type DynamicIssueFormExpose = {
 
 const selectedProductCode = ref('')
 const selectedIssueTypeCode = ref('')
+const selectedTemplateCode = ref('')
 const dynamicFormRef = ref<DynamicIssueFormExpose>()
 const issueData = ref<IssueData>({})
 const createdIssue = ref<{ jiraIssueId?: string; jiraIssueKey?: string }>()
@@ -145,10 +164,22 @@ const issueTypesQuery = useQuery({
   enabled: computed(() => Boolean(selectedProductCode.value)),
 })
 
-const fieldMappingsQuery = useQuery({
-  queryKey: ['admin', 'fieldMappings', selectedProductCode, selectedIssueTypeCode],
-  queryFn: () => adminApi.getFieldMappings(selectedProductCode.value, selectedIssueTypeCode.value),
+const templatesQuery = useQuery({
+  queryKey: ['admin', 'fieldMappingTemplates', selectedProductCode, selectedIssueTypeCode],
+  queryFn: () => adminApi.getFieldMappingTemplates(selectedProductCode.value, selectedIssueTypeCode.value),
   enabled: computed(() => Boolean(selectedProductCode.value && selectedIssueTypeCode.value)),
+})
+
+const fieldMappingsQuery = useQuery({
+  queryKey: ['admin', 'fieldMappings', selectedProductCode, selectedIssueTypeCode, selectedTemplateCode],
+  queryFn: () => adminApi.getFieldMappings(
+    selectedProductCode.value,
+    selectedIssueTypeCode.value,
+    selectedTemplateCode.value,
+  ),
+  enabled: computed(() =>
+    Boolean(selectedProductCode.value && selectedIssueTypeCode.value && selectedTemplateCode.value),
+  ),
 })
 
 const previewMutation = useMutation({
@@ -166,14 +197,18 @@ const createMutation = useMutation({
 
 const activeProducts = computed(() => (productsQuery.data.value ?? []).filter((product) => product.isActive))
 const activeIssueTypes = computed(() => (issueTypesQuery.data.value ?? []).filter((issueType) => issueType.isActive))
+const activeTemplates = computed(() => (templatesQuery.data.value ?? []).filter((template) => template.isActive))
 const fieldMappings = computed(() => fieldMappingsQuery.data.value ?? [])
-const canUseForm = computed(() => Boolean(selectedProductCode.value && selectedIssueTypeCode.value))
+const canUseForm = computed(() =>
+  Boolean(selectedProductCode.value && selectedIssueTypeCode.value && selectedTemplateCode.value),
+)
 const isLoadingMappings = computed(
-  () => issueTypesQuery.isLoading.value || fieldMappingsQuery.isLoading.value,
+  () => issueTypesQuery.isLoading.value || templatesQuery.isLoading.value || fieldMappingsQuery.isLoading.value,
 )
 const createRequest = computed(() => ({
   productCode: selectedProductCode.value,
   issueTypeCode: selectedIssueTypeCode.value,
+  templateCode: selectedTemplateCode.value,
   data: issueData.value,
 }))
 const selectionError = computed(() => {
@@ -183,14 +218,20 @@ const selectionError = computed(() => {
   if (selectedProductCode.value && !activeIssueTypes.value.length && !issueTypesQuery.isLoading.value) {
     return 'Product nay chua co active issue type.'
   }
+  if (selectedIssueTypeCode.value && !activeTemplates.value.length && !templatesQuery.isLoading.value) {
+    return 'Issue type nay chua co field mapping template.'
+  }
   if (selectedIssueTypeCode.value && !fieldMappings.value.length && !fieldMappingsQuery.isLoading.value) {
-    return 'Issue type nay chua co field mapping.'
+    return 'Template nay chua co field mapping.'
   }
   return ''
 })
 const queryError = computed(() => {
   const error =
-    productsQuery.error.value ?? issueTypesQuery.error.value ?? fieldMappingsQuery.error.value
+    productsQuery.error.value ??
+    issueTypesQuery.error.value ??
+    templatesQuery.error.value ??
+    fieldMappingsQuery.error.value
   return error ? describeApiError(error, 'Khong tai duoc cau hinh tao issue.') : ''
 })
 const resultMessage = computed(() =>
@@ -226,7 +267,22 @@ watch(
   { immediate: true },
 )
 
-watch([selectedProductCode, selectedIssueTypeCode], () => {
+watch(
+  activeTemplates,
+  (templates) => {
+    if (!templates.some((template) => template.templateCode === selectedTemplateCode.value)) {
+      selectedTemplateCode.value =
+        templates.find((template) => template.isDefault)?.templateCode ?? templates[0]?.templateCode ?? ''
+    }
+  },
+  { immediate: true },
+)
+
+watch(selectedIssueTypeCode, () => {
+  selectedTemplateCode.value = ''
+})
+
+watch([selectedProductCode, selectedIssueTypeCode, selectedTemplateCode], () => {
   issueData.value = {}
   createdIssue.value = undefined
   previewMutation.reset()

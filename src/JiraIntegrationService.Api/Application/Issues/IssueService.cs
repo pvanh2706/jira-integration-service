@@ -266,9 +266,10 @@ public sealed class IssueService : IIssueService
             product.Code,
             issueTypeCode,
             cancellationToken);
-        var fieldMappings = await _productConfigService.GetFieldMappingsAsync(
+        var fieldMappings = await _productConfigService.GetFieldMappingsByTemplateAsync(
             product.Code,
             issueType.IssueTypeCode,
+            request.TemplateCode,
             cancellationToken);
 
         var jiraRequest = _jiraIssuePayloadBuilder.BuildCreateIssueRequest(

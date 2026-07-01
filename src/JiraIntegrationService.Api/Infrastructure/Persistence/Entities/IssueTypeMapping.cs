@@ -22,5 +22,9 @@ public sealed class IssueTypeMapping
 
     public ICollection<IssueFieldMapping> IssueFieldMappings { get; set; } = [];
 
+    public ICollection<IssueFieldMappingTemplate> IssueFieldMappingTemplates { get; set; } = [];
+
+    public ICollection<JiraIssueTypeFieldMetadata> JiraFieldMetadata { get; set; } = [];
+
     public ICollection<StatusMapping> StatusMappings { get; set; } = [];
 }

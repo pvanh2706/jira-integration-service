@@ -3,6 +3,7 @@ using System;
 using JiraIntegrationService.Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260622160634_AddJiraFieldMetadataCache")]
+    partial class AddJiraFieldMetadataCache
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -83,11 +86,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("TemplateCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
 
@@ -117,7 +115,7 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("IssueTypeMappingId");
 
-                    b.HasIndex("ProductId", "IssueTypeMappingId", "TemplateCode", "SourcePath")
+                    b.HasIndex("ProductId", "IssueTypeMappingId", "SourcePath")
                         .IsUnique();
 
                     b.ToTable("IssueFieldMappings", (string)null);
@@ -134,7 +132,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                             ProductId = 1,
                             SortOrder = 10,
                             SourcePath = "data.summary",
-                            TemplateCode = "DEFAULT",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             ValueShape = "raw",
                             ValueType = "string"
@@ -150,7 +147,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                             ProductId = 1,
                             SortOrder = 20,
                             SourcePath = "data.description",
-                            TemplateCode = "DEFAULT",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             ValueShape = "raw",
                             ValueType = "string"
@@ -166,7 +162,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                             ProductId = 1,
                             SortOrder = 30,
                             SourcePath = "data.priority",
-                            TemplateCode = "DEFAULT",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             ValueShape = "name",
                             ValueType = "string"
@@ -182,7 +177,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                             ProductId = 1,
                             SortOrder = 40,
                             SourcePath = "data.customer.code",
-                            TemplateCode = "DEFAULT",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             ValueShape = "raw",
                             ValueType = "string"
@@ -198,86 +192,9 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                             ProductId = 1,
                             SortOrder = 50,
                             SourcePath = "data.ticket.url",
-                            TemplateCode = "DEFAULT",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             ValueShape = "raw",
                             ValueType = "string"
-                        });
-                });
-
-            modelBuilder.Entity("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.IssueFieldMappingTemplate", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("IssueTypeMappingId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("TemplateCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("IssueTypeMappingId");
-
-                    b.HasIndex("ProductId", "IssueTypeMappingId", "TemplateCode")
-                        .IsUnique();
-
-                    b.ToTable("IssueFieldMappingTemplates", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Default field mapping template.",
-                            IsActive = true,
-                            IsDefault = true,
-                            IssueTypeMappingId = 1,
-                            Name = "Default",
-                            ProductId = 1,
-                            TemplateCode = "DEFAULT",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Default field mapping template.",
-                            IsActive = true,
-                            IsDefault = true,
-                            IssueTypeMappingId = 2,
-                            Name = "Default",
-                            ProductId = 1,
-                            TemplateCode = "DEFAULT",
-                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 
@@ -668,25 +585,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.IssueFieldMappingTemplate", b =>
-                {
-                    b.HasOne("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.IssueTypeMapping", "IssueTypeMapping")
-                        .WithMany("IssueFieldMappingTemplates")
-                        .HasForeignKey("IssueTypeMappingId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.Product", "Product")
-                        .WithMany("IssueFieldMappingTemplates")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("IssueTypeMapping");
-
-                    b.Navigation("Product");
-                });
-
             modelBuilder.Entity("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.IssueTypeMapping", b =>
                 {
                     b.HasOne("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.Product", "Product")
@@ -750,8 +648,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
                 {
                     b.Navigation("IssueFieldMappings");
 
-                    b.Navigation("IssueFieldMappingTemplates");
-
                     b.Navigation("JiraFieldMetadata");
 
                     b.Navigation("StatusMappings");
@@ -760,8 +656,6 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("JiraIntegrationService.Api.Infrastructure.Persistence.Entities.Product", b =>
                 {
                     b.Navigation("IssueFieldMappings");
-
-                    b.Navigation("IssueFieldMappingTemplates");
 
                     b.Navigation("IssueTypeMappings");
 

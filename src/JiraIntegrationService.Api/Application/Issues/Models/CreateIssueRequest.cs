@@ -11,6 +11,8 @@ public sealed class CreateIssueRequest
     [Required]
     public string? IssueTypeCode { get; init; }
 
+    public string? TemplateCode { get; init; }
+
     [Required]
     public JsonElement? Data { get; init; }
 }

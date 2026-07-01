@@ -11,7 +11,13 @@ public sealed record FieldMappingConfig(
     string ValueType = "string",
     string ValueShape = "raw",
     int SortOrder = 0,
-    string? TransformConfigJson = null)
+    string? TransformConfigJson = null,
+    string? JiraFieldName = null,
+    string? JiraFieldDescription = null,
+    string? JiraSchemaType = null,
+    string? JiraSchemaItems = null,
+    string? JiraAllowedValuesJson = null,
+    string? JiraDefaultValueJson = null)
 {
     public string SourcePath => SourceField;
 }

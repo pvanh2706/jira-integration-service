@@ -8,6 +8,7 @@ namespace JiraIntegrationService.Api.Infrastructure.Persistence;
 public sealed class ProductConfigService : IProductConfigService
 {
     public const string UnknownStatus = "UNKNOWN";
+    private const string DefaultTemplateCode = "DEFAULT";
 
     private readonly AppDbContext _dbContext;
 
@@ -66,6 +67,41 @@ public sealed class ProductConfigService : IProductConfigService
         string? issueTypeCode,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(issueTypeCode))
+        {
+            return await GetFieldMappingsByTemplateInternalAsync(
+                productCode,
+                issueTypeCode,
+                templateCode: null,
+                cancellationToken);
+        }
+
+        return await GetFieldMappingsByTemplateInternalAsync(
+            productCode,
+            issueTypeCode,
+            DefaultTemplateCode,
+            cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<FieldMappingConfig>> GetFieldMappingsByTemplateAsync(
+        string productCode,
+        string issueTypeCode,
+        string? templateCode,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetFieldMappingsByTemplateInternalAsync(
+            productCode,
+            issueTypeCode,
+            NormalizeTemplateCodeOrDefault(templateCode),
+            cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<FieldMappingConfig>> GetFieldMappingsByTemplateInternalAsync(
+        string productCode,
+        string? issueTypeCode,
+        string? templateCode,
+        CancellationToken cancellationToken)
+    {
         var product = await GetActiveProductAsync(productCode, cancellationToken);
         var issueType = await GetOptionalIssueTypeAsync(product, issueTypeCode, cancellationToken);
 
@@ -75,6 +111,7 @@ public sealed class ProductConfigService : IProductConfigService
             .Where(item =>
                 item.ProductId == product.Id
                 && item.IsActive
+                && (item.IssueTypeMappingId == null || item.TemplateCode == templateCode)
                 && (item.IssueTypeMappingId == null || item.IssueTypeMappingId == issueTypeId))
             .OrderBy(item => item.IssueTypeMappingId == null ? 0 : 1)
             .ThenBy(item => item.SortOrder)
@@ -240,6 +277,13 @@ public sealed class ProductConfigService : IProductConfigService
         return value.Trim().ToUpperInvariant();
     }
 
+    private static string NormalizeTemplateCodeOrDefault(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? DefaultTemplateCode
+            : value.Trim().ToUpperInvariant();
+    }
+
     private static string NormalizeTextRequired(string value, string parameterName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -285,7 +329,13 @@ public sealed class ProductConfigService : IProductConfigService
             mapping.ValueType,
             mapping.ValueShape,
             mapping.SortOrder,
-            mapping.TransformConfigJson);
+            mapping.TransformConfigJson,
+            mapping.JiraFieldName,
+            mapping.JiraFieldDescription,
+            mapping.JiraSchemaType,
+            mapping.JiraSchemaItems,
+            mapping.JiraAllowedValuesJson,
+            mapping.JiraDefaultValueJson);
     }
 
     private static StatusTransitionConfig ToStatusTransitionConfig(StatusMapping mapping)

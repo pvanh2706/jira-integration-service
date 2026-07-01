@@ -5,7 +5,24 @@
         <h3>Issue type mappings</h3>
         <p>Map issue type noi bo sang Jira issue type id/name.</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="openCreateDialog">New issue type</el-button>
+      <div class="button-row">
+        <el-button
+          :icon="Refresh"
+          :loading="syncMutation.isPending.value"
+          :disabled="!productCode"
+          @click="syncFromJira"
+        >
+          Sync from Jira
+        </el-button>
+        <el-button
+          type="primary"
+          :icon="Plus"
+          :disabled="syncMutation.isPending.value"
+          @click="openCreateDialog"
+        >
+          New issue type
+        </el-button>
+      </div>
     </div>
 
     <el-alert
@@ -87,10 +104,10 @@
 </template>
 
 <script setup lang="ts">
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import dayjs from 'dayjs'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 
 import { adminApi } from '../services/adminApi'
@@ -147,12 +164,20 @@ const updateMutation = useMutation({
   },
 })
 
+const syncMutation = useMutation({
+  mutationFn: () => adminApi.syncIssueTypesFromJira(props.productCode),
+  onSuccess: async (result) => {
+    ElMessage.success(`Synced ${result.total} issue types from Jira.`)
+    await invalidateIssueTypes()
+  },
+})
+
 const issueTypes = computed(() => issueTypesQuery.data.value ?? [])
-const errorMessage = computed(() =>
-  issueTypesQuery.error.value
-    ? describeApiError(issueTypesQuery.error.value, 'Khong tai duoc issue types.')
-    : '',
-)
+const errorMessage = computed(() => {
+  const error = issueTypesQuery.error.value ?? syncMutation.error.value
+
+  return error ? describeApiError(error, 'Khong tai duoc issue types.') : ''
+})
 const isSaving = computed(() => createMutation.isPending.value || updateMutation.isPending.value)
 
 const requireTarget = (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
@@ -190,6 +215,24 @@ function openEditDialog(issueType: IssueTypeMappingAdminResponse) {
     isActive: issueType.isActive,
   })
   dialogVisible.value = true
+}
+
+async function syncFromJira() {
+  try {
+    await ElMessageBox.confirm(
+      'Du lieu issue type hien tai cua product nay se bi thay the bang du lieu tu Jira.',
+      'Sync issue types from Jira',
+      {
+        confirmButtonText: 'Sync',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return
+  }
+
+  await syncMutation.mutateAsync()
 }
 
 async function submit() {

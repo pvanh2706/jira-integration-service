@@ -8,9 +8,29 @@ public sealed class IssueFieldMapping
 
     public int? IssueTypeMappingId { get; set; }
 
+    public string TemplateCode { get; set; } = string.Empty;
+
     public string SourcePath { get; set; } = string.Empty;
 
     public string JiraField { get; set; } = string.Empty;
+
+    public string? JiraFieldName { get; set; }
+
+    public string? JiraFieldDescription { get; set; }
+
+    public string? JiraSchemaType { get; set; }
+
+    public string? JiraSchemaItems { get; set; }
+
+    public string? JiraSchemaSystem { get; set; }
+
+    public string? JiraSchemaCustom { get; set; }
+
+    public string? JiraAllowedValuesJson { get; set; }
+
+    public string? JiraDefaultValueJson { get; set; }
+
+    public string? JiraAutoCompleteUrl { get; set; }
 
     public string ValueType { get; set; } = string.Empty;
 

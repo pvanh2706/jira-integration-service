@@ -22,6 +22,17 @@ public interface IJiraClient
         string? jiraIssueKey,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<JiraIssueTypeResponse>> GetIssueTypesAsync(
+        JiraConnectionConfig connection,
+        string projectKey,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<JiraIssueFieldMetadataResponse>> GetIssueTypeFieldsAsync(
+        JiraConnectionConfig connection,
+        string projectKey,
+        string issueTypeId,
+        CancellationToken cancellationToken = default);
+
     Task TransitionIssueAsync(
         JiraConnectionConfig connection,
         TransitionJiraIssueRequest request,

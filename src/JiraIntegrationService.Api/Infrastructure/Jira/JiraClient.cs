@@ -109,6 +109,56 @@ public sealed class JiraClient : IJiraClient
             ?? [];
     }
 
+    public async Task<IReadOnlyList<JiraIssueTypeResponse>> GetIssueTypesAsync(
+        JiraConnectionConfig connection,
+        string projectKey,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        var normalizedProjectKey = NormalizeRequiredJiraValue(projectKey, nameof(projectKey));
+        var jiraResponse = await SendAsync<GetIssueTypesJiraResponse>(
+            HttpMethod.Get,
+            $"issue/createmeta/{Uri.EscapeDataString(normalizedProjectKey)}/issuetypes",
+            connection,
+            body: null,
+            cancellationToken);
+
+        return jiraResponse.Values
+            ?.Where(item => !string.IsNullOrWhiteSpace(item.Id) && !string.IsNullOrWhiteSpace(item.Name))
+            .Select(item => new JiraIssueTypeResponse(
+                item.Id!.Trim(),
+                item.Name!.Trim(),
+                string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim(),
+                item.Subtask))
+            .ToArray()
+            ?? [];
+    }
+
+    public async Task<IReadOnlyList<JiraIssueFieldMetadataResponse>> GetIssueTypeFieldsAsync(
+        JiraConnectionConfig connection,
+        string projectKey,
+        string issueTypeId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+
+        var normalizedProjectKey = NormalizeRequiredJiraValue(projectKey, nameof(projectKey));
+        var normalizedIssueTypeId = NormalizeRequiredJiraValue(issueTypeId, nameof(issueTypeId));
+        var jiraResponse = await SendAsync<GetIssueTypeFieldsJiraResponse>(
+            HttpMethod.Get,
+            $"issue/createmeta/{Uri.EscapeDataString(normalizedProjectKey)}/issuetypes/{Uri.EscapeDataString(normalizedIssueTypeId)}",
+            connection,
+            body: null,
+            cancellationToken);
+
+        return jiraResponse.Values
+            ?.Where(item => !string.IsNullOrWhiteSpace(item.FieldId) && !string.IsNullOrWhiteSpace(item.Name))
+            .Select(ToIssueFieldMetadataResponse)
+            .ToArray()
+            ?? [];
+    }
+
     public Task TransitionIssueAsync(
         JiraConnectionConfig connection,
         TransitionJiraIssueRequest request,
@@ -617,6 +667,103 @@ public sealed class JiraClient : IJiraClient
             || key.Contains("secret", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static JiraIssueFieldMetadataResponse ToIssueFieldMetadataResponse(
+        GetIssueTypeFieldJiraResponse item)
+    {
+        var schema = item.Schema is null
+            ? new JiraIssueFieldSchemaResponse(null, null, null, null, null)
+            : new JiraIssueFieldSchemaResponse(
+                NormalizeOptionalJiraValue(item.Schema.Type),
+                NormalizeOptionalJiraValue(item.Schema.Items),
+                NormalizeOptionalJiraValue(item.Schema.System),
+                NormalizeOptionalJiraValue(item.Schema.Custom),
+                item.Schema.CustomId);
+
+        var operations = item.Operations
+            ?.Select(NormalizeOptionalJiraValue)
+            .Where(operation => operation is not null)
+            .Select(operation => operation!)
+            .ToArray()
+            ?? [];
+
+        var allowedValues = item.AllowedValues
+            ?.Select(ToAllowedValueResponse)
+            .ToArray()
+            ?? [];
+
+        return new JiraIssueFieldMetadataResponse(
+            item.FieldId!.Trim(),
+            item.Name!.Trim(),
+            item.Required,
+            schema,
+            item.HasDefaultValue,
+            CloneOptionalElement(item.DefaultValue),
+            operations,
+            allowedValues,
+            NormalizeOptionalJiraValue(item.AutoCompleteUrl));
+    }
+
+    private static JiraAllowedValueResponse ToAllowedValueResponse(JsonElement item)
+    {
+        return new JiraAllowedValueResponse(
+            GetOptionalJsonString(item, "id"),
+            GetOptionalJsonString(item, "key"),
+            GetOptionalJsonString(item, "name"),
+            GetOptionalJsonString(item, "value"),
+            GetOptionalJsonString(item, "description"),
+            GetOptionalJsonBoolean(item, "disabled") ?? false,
+            item.Clone());
+    }
+
+    private static JsonElement? CloneOptionalElement(JsonElement? value)
+    {
+        if (!value.HasValue || value.Value.ValueKind == JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        return value.Value.Clone();
+    }
+
+    private static string? GetOptionalJsonString(JsonElement item, string propertyName)
+    {
+        if (item.ValueKind != JsonValueKind.Object || !item.TryGetProperty(propertyName, out var property))
+        {
+            return item.ValueKind == JsonValueKind.String && string.Equals(propertyName, "value", StringComparison.Ordinal)
+                ? NormalizeOptionalJiraValue(item.GetString())
+                : null;
+        }
+
+        return property.ValueKind switch
+        {
+            JsonValueKind.String => NormalizeOptionalJiraValue(property.GetString()),
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => property.GetRawText(),
+            _ => null
+        };
+    }
+
+    private static bool? GetOptionalJsonBoolean(JsonElement item, string propertyName)
+    {
+        if (item.ValueKind != JsonValueKind.Object || !item.TryGetProperty(propertyName, out var property))
+        {
+            return null;
+        }
+
+        if (property.ValueKind is JsonValueKind.True or JsonValueKind.False)
+        {
+            return property.GetBoolean();
+        }
+
+        return property.ValueKind == JsonValueKind.String && bool.TryParse(property.GetString(), out var value)
+            ? value
+            : null;
+    }
+
+    private static string? NormalizeOptionalJiraValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
     private static string Truncate(string value, int maxLength)
     {
         if (value.Length <= maxLength)
@@ -638,6 +785,34 @@ public sealed class JiraClient : IJiraClient
     private sealed record GetTransitionsJiraResponse(IReadOnlyList<GetTransitionJiraResponse>? Transitions);
 
     private sealed record GetTransitionJiraResponse(string? Id, string? Name);
+
+    private sealed record GetIssueTypesJiraResponse(IReadOnlyList<GetIssueTypeJiraResponse>? Values);
+
+    private sealed record GetIssueTypeJiraResponse(
+        string? Id,
+        string? Name,
+        string? Description,
+        bool Subtask);
+
+    private sealed record GetIssueTypeFieldsJiraResponse(IReadOnlyList<GetIssueTypeFieldJiraResponse>? Values);
+
+    private sealed record GetIssueTypeFieldJiraResponse(
+        bool Required,
+        GetIssueTypeFieldSchemaJiraResponse? Schema,
+        string? Name,
+        string? FieldId,
+        string? AutoCompleteUrl,
+        bool HasDefaultValue,
+        JsonElement? DefaultValue,
+        IReadOnlyList<string>? Operations,
+        IReadOnlyList<JsonElement>? AllowedValues);
+
+    private sealed record GetIssueTypeFieldSchemaJiraResponse(
+        string? Type,
+        string? Items,
+        string? System,
+        string? Custom,
+        int? CustomId);
 
     private sealed record EmptyJiraResponse;
 }

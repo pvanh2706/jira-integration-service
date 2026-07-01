@@ -673,3 +673,37 @@ Thiết kế hiện tại có sẵn cho các nâng cấp sau:
   - fallback chain
 - Mã hóa credential trong DB.
 - Audit log thay đổi cấu hình admin.
+## 14. Jira Field Metadata Va Description Tu Nhap
+
+Tab `Field Mappings` doc field metadata tu cache trong DB theo product va issue type.
+Neu can cap nhat lai tu Jira, bam `Reload Jira fields`. UI se hien thoi diem
+cap nhat cuoi cung cua cache.
+
+Dieu kien:
+
+- Product co credential active.
+- Issue type co `Jira issue type id`.
+- Product cau hinh dung `Jira project key`, `Jira base URL`, `Jira API path`.
+
+Luong khuyen nghi:
+
+1. Vao `Products -> chon product -> Issue Types`.
+2. Sync issue types tu Jira hoac nhap `Jira issue type id` thu cong.
+3. Vao tab `Field Mappings`, chon issue type.
+4. Bam `Reload Jira fields` de sync metadata tu Jira vao cache.
+5. Khi tao/sua mapping, chon `Jira metadata` de UI tu dien `Jira field`, `Jira field name`, `Description`, `Source path`, `Value type`, `Value shape`, required/default/allowed values neu Jira tra ve.
+
+Field `Description` trong mapping mac dinh lay bang `Jira field name` khi tao mapping moi,
+admin co the sua lai neu can mo ta chi tiet hon. Mo ta nay duoc hien o man
+`Create issue` de nguoi tao issue nhap dung hon.
+
+Voi select custom field, admin nen dung:
+
+| Jira schema | Value type | Value shape | Default value |
+| --- | --- | --- | --- |
+| `option` | `string` | `value` | Gia tri option, vi du `Development` |
+| `priority` | `string` | `name` | Ten priority, vi du `Medium` |
+| `array:component` | `array` | `raw` voi `jiraField = componentIds` | JSON array id, vi du `["15690"]` |
+| `array:version` | `array` | `arrayOfId` | JSON array id version |
+
+Man `Create issue` se hien select/multi-select neu mapping co `JiraAllowedValuesJson`. Neu khong co allowed values, UI fallback ve input/textarea JSON nhu truoc.

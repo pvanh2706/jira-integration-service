@@ -42,21 +42,58 @@ public interface IAdminConfigurationService
         CreateIssueTypeMappingAdminRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<SyncIssueTypesAdminResponse> SyncIssueTypesFromJiraAsync(
+        string productCode,
+        CancellationToken cancellationToken = default);
+
+    Task<JiraFieldsMetadataAdminResponse> GetJiraFieldsAsync(
+        string productCode,
+        string issueTypeCode,
+        CancellationToken cancellationToken = default);
+
+    Task<JiraFieldsMetadataAdminResponse> SyncJiraFieldsFromJiraAsync(
+        string productCode,
+        string issueTypeCode,
+        CancellationToken cancellationToken = default);
+
     Task<IssueTypeMappingAdminResponse> UpdateIssueTypeAsync(
         string productCode,
         string issueTypeCode,
         UpdateIssueTypeMappingAdminRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<FieldMappingTemplateAdminResponse>> GetFieldMappingTemplatesAsync(
+        string productCode,
+        string issueTypeCode,
+        CancellationToken cancellationToken = default);
+
+    Task<FieldMappingTemplateAdminResponse> CreateFieldMappingTemplateAsync(
+        string productCode,
+        string issueTypeCode,
+        CreateFieldMappingTemplateAdminRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task DeleteFieldMappingTemplateAsync(
+        int id,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<IssueFieldMappingAdminResponse>> GetFieldMappingsAsync(
         string productCode,
         string issueTypeCode,
+        string? templateCode = null,
         CancellationToken cancellationToken = default);
 
     Task<IssueFieldMappingAdminResponse> CreateFieldMappingAsync(
         string productCode,
         string issueTypeCode,
+        string? templateCode,
         UpsertIssueFieldMappingAdminRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<SetDefaultFieldMappingsAdminResponse> SetEasSubTaskDefaultFieldMappingsAsync(
+        string productCode,
+        string issueTypeCode,
+        string? templateCode = null,
         CancellationToken cancellationToken = default);
 
     Task<IssueFieldMappingAdminResponse> UpdateFieldMappingAsync(

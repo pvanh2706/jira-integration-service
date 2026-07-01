@@ -1,13 +1,18 @@
 import { apiRequest } from './http'
 import type {
+  CreateFieldMappingTemplateAdminRequest,
   CreateIssueTypeMappingAdminRequest,
   CreateProductAdminRequest,
   DeleteAdminResponse,
+  FieldMappingTemplateAdminResponse,
   IssueFieldMappingAdminResponse,
   IssueTypeMappingAdminResponse,
   JiraCredentialAdminResponse,
+  JiraFieldsMetadataAdminResponse,
   ProductAdminResponse,
+  SetDefaultFieldMappingsAdminResponse,
   StatusMappingAdminResponse,
+  SyncIssueTypesAdminResponse,
   UpdateIssueTypeMappingAdminRequest,
   UpdateProductAdminRequest,
   UpsertIssueFieldMappingAdminRequest,
@@ -85,6 +90,27 @@ export const adminApi = {
     })
   },
 
+  syncIssueTypesFromJira(code: string) {
+    return apiRequest<SyncIssueTypesAdminResponse>({
+      method: 'POST',
+      url: `/admin/products/${segment(code)}/issue-types/sync-from-jira`,
+    })
+  },
+
+  getJiraFields(code: string, issueTypeCode: string) {
+    return apiRequest<JiraFieldsMetadataAdminResponse>({
+      method: 'GET',
+      url: `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/jira-fields`,
+    })
+  },
+
+  syncJiraFieldsFromJira(code: string, issueTypeCode: string) {
+    return apiRequest<JiraFieldsMetadataAdminResponse>({
+      method: 'POST',
+      url: `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/jira-fields/sync-from-jira`,
+    })
+  },
+
   updateIssueType(
     code: string,
     issueTypeCode: string,
@@ -97,10 +123,39 @@ export const adminApi = {
     })
   },
 
-  getFieldMappings(code: string, issueTypeCode: string) {
+  getFieldMappingTemplates(code: string, issueTypeCode: string) {
+    return apiRequest<FieldMappingTemplateAdminResponse[]>({
+      method: 'GET',
+      url: `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mapping-templates`,
+    })
+  },
+
+  createFieldMappingTemplate(
+    code: string,
+    issueTypeCode: string,
+    payload: CreateFieldMappingTemplateAdminRequest,
+  ) {
+    return apiRequest<FieldMappingTemplateAdminResponse>({
+      method: 'POST',
+      url: `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mapping-templates`,
+      data: payload,
+    })
+  },
+
+  deleteFieldMappingTemplate(id: number) {
+    return apiRequest<DeleteAdminResponse>({
+      method: 'DELETE',
+      url: `/admin/field-mapping-templates/${id}`,
+    })
+  },
+
+  getFieldMappings(code: string, issueTypeCode: string, templateCode?: string) {
     return apiRequest<IssueFieldMappingAdminResponse[]>({
       method: 'GET',
-      url: `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mappings`,
+      url: withTemplateCode(
+        `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mappings`,
+        templateCode,
+      ),
     })
   },
 
@@ -108,11 +163,25 @@ export const adminApi = {
     code: string,
     issueTypeCode: string,
     payload: UpsertIssueFieldMappingAdminRequest,
+    templateCode?: string,
   ) {
     return apiRequest<IssueFieldMappingAdminResponse>({
       method: 'POST',
-      url: `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mappings`,
+      url: withTemplateCode(
+        `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mappings`,
+        templateCode,
+      ),
       data: payload,
+    })
+  },
+
+  setEasSubTaskDefaultFieldMappings(code: string, issueTypeCode: string, templateCode?: string) {
+    return apiRequest<SetDefaultFieldMappingsAdminResponse>({
+      method: 'POST',
+      url: withTemplateCode(
+        `/admin/products/${segment(code)}/issue-types/${segment(issueTypeCode)}/field-mappings/eas-sub-task-defaults`,
+        templateCode,
+      ),
     })
   },
 
@@ -176,4 +245,9 @@ export const adminApi = {
 
 function segment(value: string) {
   return encodeURIComponent(value.trim())
+}
+
+function withTemplateCode(url: string, templateCode?: string) {
+  const normalized = templateCode?.trim()
+  return normalized ? `${url}?templateCode=${segment(normalized)}` : url
 }

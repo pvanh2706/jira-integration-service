@@ -107,6 +107,75 @@ public sealed record IssueTypeMappingAdminResponse(
     DateTime CreatedAt,
     DateTime UpdatedAt);
 
+public sealed record SyncIssueTypesAdminResponse(
+    string ProductCode,
+    int Total,
+    IReadOnlyList<IssueTypeMappingAdminResponse> IssueTypes);
+
+public sealed record JiraFieldMetadataAdminResponse(
+    string FieldId,
+    string Name,
+    bool Required,
+    string? SchemaType,
+    string? SchemaItems,
+    string? SchemaSystem,
+    string? SchemaCustom,
+    int? SchemaCustomId,
+    bool HasDefaultValue,
+    string? DefaultValueJson,
+    string? AutoCompleteUrl,
+    IReadOnlyList<string> Operations,
+    IReadOnlyList<JiraAllowedValueAdminResponse> AllowedValues,
+    string RecommendedValueType,
+    string RecommendedValueShape,
+    DateTime? UpdatedAt);
+
+public sealed record JiraFieldsMetadataAdminResponse(
+    string ProductCode,
+    string IssueTypeCode,
+    DateTime? UpdatedAt,
+    int Total,
+    IReadOnlyList<JiraFieldMetadataAdminResponse> Fields);
+
+public sealed record JiraAllowedValueAdminResponse(
+    string? Id,
+    string? Key,
+    string? Name,
+    string? Value,
+    string? Description,
+    bool Disabled,
+    string RawJson);
+
+public sealed class CreateFieldMappingTemplateAdminRequest
+{
+    [Required]
+    public string? TemplateCode { get; init; }
+
+    [Required]
+    public string? Name { get; init; }
+
+    public string? Description { get; init; }
+
+    public string? SourceTemplateCode { get; init; }
+
+    public bool CopyMappings { get; init; } = true;
+
+    public bool IsActive { get; init; } = true;
+}
+
+public sealed record FieldMappingTemplateAdminResponse(
+    int Id,
+    int ProductId,
+    int IssueTypeMappingId,
+    string TemplateCode,
+    string Name,
+    string? Description,
+    bool IsDefault,
+    bool IsActive,
+    int MappingCount,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
 public sealed class UpsertIssueFieldMappingAdminRequest
 {
     [Required]
@@ -114,6 +183,24 @@ public sealed class UpsertIssueFieldMappingAdminRequest
 
     [Required]
     public string? JiraField { get; init; }
+
+    public string? JiraFieldName { get; init; }
+
+    public string? JiraFieldDescription { get; init; }
+
+    public string? JiraSchemaType { get; init; }
+
+    public string? JiraSchemaItems { get; init; }
+
+    public string? JiraSchemaSystem { get; init; }
+
+    public string? JiraSchemaCustom { get; init; }
+
+    public string? JiraAllowedValuesJson { get; init; }
+
+    public string? JiraDefaultValueJson { get; init; }
+
+    public string? JiraAutoCompleteUrl { get; init; }
 
     public string? ValueType { get; init; }
 
@@ -134,8 +221,18 @@ public sealed record IssueFieldMappingAdminResponse(
     int Id,
     int ProductId,
     int? IssueTypeMappingId,
+    string TemplateCode,
     string SourcePath,
     string JiraField,
+    string? JiraFieldName,
+    string? JiraFieldDescription,
+    string? JiraSchemaType,
+    string? JiraSchemaItems,
+    string? JiraSchemaSystem,
+    string? JiraSchemaCustom,
+    string? JiraAllowedValuesJson,
+    string? JiraDefaultValueJson,
+    string? JiraAutoCompleteUrl,
     string ValueType,
     string ValueShape,
     bool IsRequired,
@@ -145,6 +242,12 @@ public sealed record IssueFieldMappingAdminResponse(
     string? TransformConfigJson,
     DateTime CreatedAt,
     DateTime UpdatedAt);
+
+public sealed record SetDefaultFieldMappingsAdminResponse(
+    string ProductCode,
+    string IssueTypeCode,
+    int Total,
+    IReadOnlyList<IssueFieldMappingAdminResponse> FieldMappings);
 
 public sealed class UpsertStatusMappingAdminRequest
 {

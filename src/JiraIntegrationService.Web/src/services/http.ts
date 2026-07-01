@@ -86,8 +86,9 @@ function fromAxiosError(error: AxiosError): ApiClientError {
     )
   }
 
+  const requestUrl = describeRequestUrl(error.config)
   const message = error.response?.status
-    ? `Request failed with status ${error.response.status}.`
+    ? `Request failed with status ${error.response.status}${requestUrl ? ` for ${requestUrl}` : ''}.`
     : error.message || 'Cannot connect to API.'
 
   return assignApiError(message, error.response?.status, undefined, undefined, responseData)
@@ -133,9 +134,39 @@ function isApiClientError(error: unknown): error is ApiClientError {
 }
 
 function normalizeApiBaseUrl(value: string) {
-  const normalizedValue = value.trim() || DEFAULT_API_BASE_URL
+  const normalizedValue = appendDefaultApiPath(value.trim() || DEFAULT_API_BASE_URL)
 
   return normalizedValue.endsWith('/')
     ? normalizedValue.slice(0, normalizedValue.length - 1)
     : normalizedValue
+}
+
+function appendDefaultApiPath(value: string) {
+  if (value === '/') {
+    return DEFAULT_API_BASE_URL
+  }
+
+  try {
+    const url = new URL(value)
+    if ((url.pathname === '' || url.pathname === '/') && !url.search && !url.hash) {
+      url.pathname = DEFAULT_API_BASE_URL
+      return url.toString()
+    }
+  } catch {
+    return value
+  }
+
+  return value
+}
+
+function describeRequestUrl(config: AxiosRequestConfig | undefined) {
+  if (!config?.url) {
+    return ''
+  }
+
+  const method = config.method?.toUpperCase() ?? 'GET'
+  const baseUrl = config.baseURL?.replace(/\/$/, '') ?? ''
+  const url = config.url.startsWith('/') ? config.url : `/${config.url}`
+
+  return `${method} ${baseUrl}${url}`
 }

@@ -141,6 +141,110 @@ public sealed class JiraClientTests
     }
 
     [Fact]
+    public async Task GetIssueTypeFieldsAsync_WhenJiraReturnsCreateMetaFields_ShouldParseMetadata()
+    {
+        var handler = new FakeHttpMessageHandler();
+        handler.QueueResponse(HttpStatusCode.OK, """
+            {
+              "values": [
+                {
+                  "required": true,
+                  "schema": {
+                    "type": "array",
+                    "items": "component",
+                    "system": "components"
+                  },
+                  "name": "Component/s",
+                  "fieldId": "components",
+                  "hasDefaultValue": false,
+                  "operations": ["add", "set"],
+                  "allowedValues": [
+                    {
+                      "id": "15804",
+                      "name": "ezBac",
+                      "description": "Back office"
+                    }
+                  ]
+                },
+                {
+                  "required": false,
+                  "schema": {
+                    "type": "option",
+                    "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select",
+                    "customId": 12815
+                  },
+                  "name": "Technical Issue Type",
+                  "fieldId": "customfield_12815",
+                  "hasDefaultValue": false,
+                  "operations": ["set"],
+                  "allowedValues": [
+                    {
+                      "value": "Development",
+                      "id": "11776",
+                      "disabled": false
+                    },
+                    {
+                      "value": "Old option",
+                      "id": "1",
+                      "disabled": true
+                    }
+                  ]
+                },
+                {
+                  "required": false,
+                  "schema": {
+                    "type": "priority",
+                    "system": "priority"
+                  },
+                  "name": "Priority",
+                  "fieldId": "priority",
+                  "hasDefaultValue": true,
+                  "operations": ["set"],
+                  "defaultValue": {
+                    "id": "10102",
+                    "name": "Medium"
+                  }
+                }
+              ]
+            }
+            """);
+        var client = CreateClient(handler);
+
+        var fields = await client.GetIssueTypeFieldsAsync(Connection, "EAS", "6");
+
+        Assert.Equal(3, fields.Count);
+
+        var components = fields[0];
+        Assert.Equal("components", components.FieldId);
+        Assert.Equal("Component/s", components.Name);
+        Assert.True(components.Required);
+        Assert.Equal("array", components.Schema.Type);
+        Assert.Equal("component", components.Schema.Items);
+        Assert.Equal("components", components.Schema.System);
+        Assert.Equal(["add", "set"], components.Operations);
+        var componentValue = Assert.Single(components.AllowedValues);
+        Assert.Equal("15804", componentValue.Id);
+        Assert.Equal("ezBac", componentValue.Name);
+        Assert.Equal("Back office", componentValue.Description);
+
+        var technicalIssueType = fields[1];
+        Assert.Equal("customfield_12815", technicalIssueType.FieldId);
+        Assert.Equal("option", technicalIssueType.Schema.Type);
+        Assert.Equal(12815, technicalIssueType.Schema.CustomId);
+        Assert.Equal("Development", technicalIssueType.AllowedValues[0].Value);
+        Assert.False(technicalIssueType.AllowedValues[0].Disabled);
+        Assert.True(technicalIssueType.AllowedValues[1].Disabled);
+
+        var priority = fields[2];
+        Assert.True(priority.HasDefaultValue);
+        Assert.Equal("Medium", priority.DefaultValue!.Value.GetProperty("name").GetString());
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal("/rest/api/2/issue/createmeta/EAS/issuetypes/6", request.Uri.AbsolutePath);
+    }
+
+    [Fact]
     public async Task TransitionIssueAsync_WhenBothIdAndKeyProvided_ShouldPreferIssueIdAndCallTransitionsEndpoint()
     {
         var handler = new FakeHttpMessageHandler();

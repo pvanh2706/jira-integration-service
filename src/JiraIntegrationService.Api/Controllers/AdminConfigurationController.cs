@@ -108,6 +108,44 @@ public sealed class AdminConfigurationController : ControllerBase
         return Ok(ApiResponse<IssueTypeMappingAdminResponse>.Ok(result, TraceId.From(HttpContext)));
     }
 
+    [HttpPost("products/{code}/issue-types/sync-from-jira")]
+    public async Task<ActionResult<ApiResponse<SyncIssueTypesAdminResponse>>> SyncIssueTypesFromJira(
+        string code,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminConfigurationService.SyncIssueTypesFromJiraAsync(code, cancellationToken);
+
+        return Ok(ApiResponse<SyncIssueTypesAdminResponse>.Ok(result, TraceId.From(HttpContext)));
+    }
+
+    [HttpGet("products/{code}/issue-types/{issueTypeCode}/jira-fields")]
+    public async Task<ActionResult<ApiResponse<JiraFieldsMetadataAdminResponse>>> GetJiraFields(
+        string code,
+        string issueTypeCode,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminConfigurationService.GetJiraFieldsAsync(
+            code,
+            issueTypeCode,
+            cancellationToken);
+
+        return Ok(ApiResponse<JiraFieldsMetadataAdminResponse>.Ok(result, TraceId.From(HttpContext)));
+    }
+
+    [HttpPost("products/{code}/issue-types/{issueTypeCode}/jira-fields/sync-from-jira")]
+    public async Task<ActionResult<ApiResponse<JiraFieldsMetadataAdminResponse>>> SyncJiraFieldsFromJira(
+        string code,
+        string issueTypeCode,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminConfigurationService.SyncJiraFieldsFromJiraAsync(
+            code,
+            issueTypeCode,
+            cancellationToken);
+
+        return Ok(ApiResponse<JiraFieldsMetadataAdminResponse>.Ok(result, TraceId.From(HttpContext)));
+    }
+
     [HttpPut("products/{code}/issue-types/{issueTypeCode}")]
     public async Task<ActionResult<ApiResponse<IssueTypeMappingAdminResponse>>> UpdateIssueType(
         string code,
@@ -124,13 +162,58 @@ public sealed class AdminConfigurationController : ControllerBase
         return Ok(ApiResponse<IssueTypeMappingAdminResponse>.Ok(result, TraceId.From(HttpContext)));
     }
 
-    [HttpGet("products/{code}/issue-types/{issueTypeCode}/field-mappings")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<IssueFieldMappingAdminResponse>>>> GetFieldMappings(
+    [HttpGet("products/{code}/issue-types/{issueTypeCode}/field-mapping-templates")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<FieldMappingTemplateAdminResponse>>>> GetFieldMappingTemplates(
         string code,
         string issueTypeCode,
         CancellationToken cancellationToken)
     {
-        var result = await _adminConfigurationService.GetFieldMappingsAsync(code, issueTypeCode, cancellationToken);
+        var result = await _adminConfigurationService.GetFieldMappingTemplatesAsync(
+            code,
+            issueTypeCode,
+            cancellationToken);
+
+        return Ok(ApiResponse<IReadOnlyList<FieldMappingTemplateAdminResponse>>.Ok(result, TraceId.From(HttpContext)));
+    }
+
+    [HttpPost("products/{code}/issue-types/{issueTypeCode}/field-mapping-templates")]
+    public async Task<ActionResult<ApiResponse<FieldMappingTemplateAdminResponse>>> CreateFieldMappingTemplate(
+        string code,
+        string issueTypeCode,
+        [FromBody] CreateFieldMappingTemplateAdminRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminConfigurationService.CreateFieldMappingTemplateAsync(
+            code,
+            issueTypeCode,
+            request,
+            cancellationToken);
+
+        return Ok(ApiResponse<FieldMappingTemplateAdminResponse>.Ok(result, TraceId.From(HttpContext)));
+    }
+
+    [HttpDelete("field-mapping-templates/{id:int}")]
+    public async Task<ActionResult<ApiResponse<DeleteAdminResponse>>> DeleteFieldMappingTemplate(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        await _adminConfigurationService.DeleteFieldMappingTemplateAsync(id, cancellationToken);
+
+        return Ok(ApiResponse<DeleteAdminResponse>.Ok(new DeleteAdminResponse(true), TraceId.From(HttpContext)));
+    }
+
+    [HttpGet("products/{code}/issue-types/{issueTypeCode}/field-mappings")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<IssueFieldMappingAdminResponse>>>> GetFieldMappings(
+        string code,
+        string issueTypeCode,
+        [FromQuery] string? templateCode,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminConfigurationService.GetFieldMappingsAsync(
+            code,
+            issueTypeCode,
+            templateCode,
+            cancellationToken);
 
         return Ok(ApiResponse<IReadOnlyList<IssueFieldMappingAdminResponse>>.Ok(result, TraceId.From(HttpContext)));
     }
@@ -139,16 +222,34 @@ public sealed class AdminConfigurationController : ControllerBase
     public async Task<ActionResult<ApiResponse<IssueFieldMappingAdminResponse>>> CreateFieldMapping(
         string code,
         string issueTypeCode,
+        [FromQuery] string? templateCode,
         [FromBody] UpsertIssueFieldMappingAdminRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _adminConfigurationService.CreateFieldMappingAsync(
             code,
             issueTypeCode,
+            templateCode,
             request,
             cancellationToken);
 
         return Ok(ApiResponse<IssueFieldMappingAdminResponse>.Ok(result, TraceId.From(HttpContext)));
+    }
+
+    [HttpPost("products/{code}/issue-types/{issueTypeCode}/field-mappings/eas-sub-task-defaults")]
+    public async Task<ActionResult<ApiResponse<SetDefaultFieldMappingsAdminResponse>>> SetEasSubTaskDefaultFieldMappings(
+        string code,
+        string issueTypeCode,
+        [FromQuery] string? templateCode,
+        CancellationToken cancellationToken)
+    {
+        var result = await _adminConfigurationService.SetEasSubTaskDefaultFieldMappingsAsync(
+            code,
+            issueTypeCode,
+            templateCode,
+            cancellationToken);
+
+        return Ok(ApiResponse<SetDefaultFieldMappingsAdminResponse>.Ok(result, TraceId.From(HttpContext)));
     }
 
     [HttpPut("field-mappings/{id:int}")]
