@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace JiraIntegrationService.Tests;
 
@@ -56,6 +57,21 @@ public sealed class TestApplicationFactory : WebApplicationFactory<Program>
 
             _configureTestServices?.Invoke(services);
         });
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+
+        // The application no longer seeds default data (that now lives in
+        // scripts/insert-product-config.template.sql). Migrations run during host
+        // startup above, so the schema exists here; seed the baseline EAS config
+        // that the integration tests assume is present.
+        using var scope = host.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        DefaultConfigurationSeeder.SeedEasDefaultsAsync(dbContext).GetAwaiter().GetResult();
+
+        return host;
     }
 
     protected override void Dispose(bool disposing)

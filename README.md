@@ -194,56 +194,62 @@ src/JiraIntegrationService.Api/jira-integration.db
 
 ## Seed Và Update Config Thủ Công
 
-Seed mặc định trong `AppDbContext`:
+Dữ liệu mặc định **không còn** seed qua EF Core `HasData`. Migration giờ chỉ tạo schema;
+toàn bộ dữ liệu mặc định nằm trong file SQL `scripts/insert-product-config.template.sql`.
+Nhờ vậy bạn có thể sửa giá trị mặc định trực tiếp trong file SQL mà **không cần tạo migration mới**.
 
-- Product `CRM`, Jira project key `CRM`.
-- Jira credential placeholder: username `jira-crm-user`, password `change-me`.
-- Issue type chung: `BUG` -> `Bug`, `TASK` -> `Task`.
-- Field mapping cho `BUG`: `customerId`, `sourceRecordId`.
-- Status chuẩn: `OPEN`, `IN_PROGRESS`, `WAITING`, `DONE`, `CANCELLED`.
+Dữ liệu mặc định (product `EAS`) do script nạp:
+
+- Product `EAS`, Jira project key `EAS`, base url `https://jira.ezcloudhotel.com`.
+- Jira credential: auth `Basic`, username `anh.phamviet`.
+- Issue type: `BUG` -> `Bug`, `TASK` -> `Task`.
+- Template `DEFAULT` cho mỗi issue type.
+- Field mapping cho `BUG`: `data.summary`, `data.description`, `data.priority`, `data.customer.code`, `data.ticket.url`.
+- Status chuẩn cho `BUG`: `OPEN`, `IN_PROGRESS`, `WAITING`, `DONE`, `CANCELLED`.
 - Khi đọc trạng thái Jira mà không map được, service trả `UNKNOWN`.
 
-Hiện chưa có config API hoặc admin UI. Muốn chỉnh config tạm thời thì dùng DB Browser for SQLite, `sqlite3`, hoặc tool tương đương để sửa file database local.
+Luồng tạo lại DB từ đầu:
 
-Repo có sẵn script template để insert/update cấu hình product:
+1. Xóa file `src/JiraIntegrationService.Api/jira-integration.db`.
+2. `dotnet run` (migration tạo schema rỗng, không có dữ liệu).
+3. Chạy script SQL để nạp cấu hình mặc định.
 
-```text
-scripts/insert-product-config.template.sql
-```
-
-Bạn có thể sửa phần `CONFIG SECTION` trong file này rồi chạy:
+Script là idempotent (dùng UPSERT), chạy lại nhiều lần vẫn an toàn. Muốn đổi giá trị mặc định
+thì sửa trực tiếp trong file rồi chạy lại:
 
 ```powershell
 sqlite3 src/JiraIntegrationService.Api/jira-integration.db ".read scripts/insert-product-config.template.sql"
 ```
+
+Muốn chỉnh nhanh từng bản ghi cũng có thể dùng DB Browser for SQLite, `sqlite3`, hoặc tool tương đương.
 
 Thứ tự cấu hình cho sản phẩm mới:
 
 1. Thêm `Products`.
 2. Thêm `JiraCredentials` cho product.
 3. Thêm `IssueTypeMappings`.
-4. Thêm `FieldMappings` nếu cần custom fields.
+4. Thêm `IssueFieldMappings` nếu cần custom fields.
 5. Thêm `StatusMappings`.
 
-Ví dụ update credential Jira cho `CRM`:
+Ví dụ update credential Jira cho `EAS`:
 
 ```sql
 UPDATE JiraCredentials
 SET Username = 'jira-user',
-    Password = 'jira-password-or-token',
+    PasswordOrToken = 'jira-password-or-token',
     UpdatedAt = datetime('now')
-WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'CRM')
+WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS')
   AND IsActive = 1;
 ```
 
 Ví dụ thêm product mới:
 
 ```sql
-INSERT INTO Products (Code, Name, JiraProjectKey, IsActive, CreatedAt, UpdatedAt)
-VALUES ('OPS', 'Operations', 'OPS', 1, datetime('now'), datetime('now'));
+INSERT INTO Products (Code, Name, JiraProjectKey, JiraBaseUrl, JiraApiBasePath, JiraVersion, IsActive, CreatedAt, UpdatedAt)
+VALUES ('OPS', 'Operations', 'OPS', 'https://jira.ezcloudhotel.com', '/rest/api/2', 'ServerV2', 1, datetime('now'), datetime('now'));
 
-INSERT INTO JiraCredentials (ProductId, Username, Password, IsActive, CreatedAt, UpdatedAt)
-SELECT Id, 'jira-ops-user', 'change-me', 1, datetime('now'), datetime('now')
+INSERT INTO JiraCredentials (ProductId, AuthType, Username, PasswordOrToken, IsActive, CreatedAt, UpdatedAt)
+SELECT Id, 'Basic', 'jira-ops-user', 'change-me', 1, datetime('now'), datetime('now')
 FROM Products
 WHERE Code = 'OPS';
 ```
@@ -260,8 +266,8 @@ WHERE Code = 'OPS';
 Ví dụ thêm field mapping:
 
 ```sql
-INSERT INTO FieldMappings (ProductId, IssueTypeMappingId, SourceField, JiraField, IsRequired, DefaultValue, IsActive)
-SELECT p.Id, it.Id, 'sourceRecordId', 'customfield_10011', 0, NULL, 1
+INSERT INTO IssueFieldMappings (ProductId, IssueTypeMappingId, TemplateCode, SourcePath, JiraField, ValueType, ValueShape, IsRequired, DefaultValue, SortOrder, IsActive, CreatedAt, UpdatedAt)
+SELECT p.Id, it.Id, 'DEFAULT', 'data.ticket.url', 'customfield_10011', 'string', 'raw', 0, NULL, 10, 1, datetime('now'), datetime('now')
 FROM Products p
 JOIN IssueTypeMappings it ON it.ProductId = p.Id
 WHERE p.Code = 'OPS'

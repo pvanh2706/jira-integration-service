@@ -211,6 +211,7 @@ public sealed class ProductConfigServiceTests
 
         var dbContext = new AppDbContext(options);
         await dbContext.Database.EnsureCreatedAsync();
+        await DefaultConfigurationSeeder.SeedEasDefaultsAsync(dbContext);
 
         return dbContext;
     }

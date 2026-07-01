@@ -1,534 +1,182 @@
--- Jira Integration Service - product config insert/update template for SQLite.
+-- Jira Integration Service - default configuration seed for SQLite.
 --
--- Fill the CONFIG SECTION below, then run this file against the local database.
--- Run this script once per product.
+-- This file replaces the old EF Core HasData seeding. The migrations now only
+-- create the schema; ALL default data lives here so you can edit it freely
+-- without ever adding a new migration.
 --
--- Example with sqlite3 CLI from repo root:
--- sqlite3 src/JiraIntegrationService.Api/jira-integration.db ".read scripts/insert-product-config.template.sql"
+-- Usage (from repo root), after the database schema has been created:
+--   sqlite3 src/JiraIntegrationService.Api/jira-integration.db ".read scripts/insert-product-config.template.sql"
+--
+-- Typical flow when recreating the DB:
+--   1. delete src/JiraIntegrationService.Api/jira-integration.db
+--   2. dotnet run            (migrations create the empty schema)
+--   3. run this script       (loads the default configuration)
 --
 -- Notes:
--- - ProductCode, IssueTypeCode, and StandardStatus are stored in upper case.
--- - IssueTypeCode = NULL means product-level fallback mapping.
--- - Delete or comment sample rows that you do not need.
--- - This script updates existing rows for the same product/code/source/status so it can be run again.
+--   - The script is idempotent: it UPSERTs rows, so running it again just
+--     updates existing values instead of creating duplicates.
+--   - Codes are stored in upper case (Product Code, IssueTypeCode, StandardStatus).
+--   - To change any default value, edit it directly below and re-run the script.
 
 PRAGMA foreign_keys = ON;
 
 BEGIN TRANSACTION;
 
 -- ============================================================
--- CONFIG SECTION - edit values here.
+-- 1) PRODUCT
+--    Unique key: Code
 -- ============================================================
-
-DROP TABLE IF EXISTS temp._SeedProduct;
-CREATE TEMP TABLE _SeedProduct
-(
-    Id INTEGER PRIMARY KEY CHECK (Id = 1),
-    ProductCode TEXT NOT NULL,
-    ProductName TEXT NOT NULL,
-    JiraProjectKey TEXT NOT NULL,
-    JiraUsername TEXT NOT NULL,
-    JiraPassword TEXT NOT NULL,
-    IsActive INTEGER NOT NULL DEFAULT 1 CHECK (IsActive IN (0, 1))
-);
-
-INSERT INTO _SeedProduct
-(
-    Id,
-    ProductCode,
-    ProductName,
-    JiraProjectKey,
-    JiraUsername,
-    JiraPassword,
-    IsActive
-)
-VALUES
-(
-    1,
-    'CRM',
-    'CRM',
-    'CRM',
-    'jira-crm-user',
-    'change-me',
-    1
-);
-
-DROP TABLE IF EXISTS temp._SeedIssueTypes;
-CREATE TEMP TABLE _SeedIssueTypes
-(
-    IssueTypeCode TEXT PRIMARY KEY,
-    JiraIssueTypeName TEXT NOT NULL,
-    IsActive INTEGER NOT NULL DEFAULT 1 CHECK (IsActive IN (0, 1))
-);
-
-INSERT INTO _SeedIssueTypes (IssueTypeCode, JiraIssueTypeName, IsActive)
-VALUES ('BUG', 'Bug', 1);
-
-INSERT INTO _SeedIssueTypes (IssueTypeCode, JiraIssueTypeName, IsActive)
-VALUES ('TASK', 'Task', 1);
-
--- Optional custom field mappings.
--- For product-level fallback fields, set IssueTypeCode to NULL.
-DROP TABLE IF EXISTS temp._SeedFieldMappings;
-CREATE TEMP TABLE _SeedFieldMappings
-(
-    IssueTypeCode TEXT NULL,
-    SourceField TEXT NOT NULL,
-    JiraField TEXT NOT NULL,
-    IsRequired INTEGER NOT NULL DEFAULT 0 CHECK (IsRequired IN (0, 1)),
-    DefaultValue TEXT NULL,
-    IsActive INTEGER NOT NULL DEFAULT 1 CHECK (IsActive IN (0, 1))
-);
-
-INSERT INTO _SeedFieldMappings
-(
-    IssueTypeCode,
-    SourceField,
-    JiraField,
-    IsRequired,
-    DefaultValue,
-    IsActive
-)
-VALUES ('BUG', 'customerId', 'customfield_10010', 0, NULL, 1);
-
-INSERT INTO _SeedFieldMappings
-(
-    IssueTypeCode,
-    SourceField,
-    JiraField,
-    IsRequired,
-    DefaultValue,
-    IsActive
-)
-VALUES ('BUG', 'sourceRecordId', 'customfield_10011', 0, NULL, 1);
-
--- Status mappings.
--- For update status API, JiraTransitionId or JiraTransitionName should be filled.
--- For get status API, JiraStatusName is used to map Jira status back to StandardStatus.
-DROP TABLE IF EXISTS temp._SeedStatusMappings;
-CREATE TEMP TABLE _SeedStatusMappings
-(
-    IssueTypeCode TEXT NULL,
-    StandardStatus TEXT NOT NULL CHECK (StandardStatus IN ('OPEN', 'IN_PROGRESS', 'WAITING', 'DONE', 'CANCELLED')),
-    JiraStatusName TEXT NOT NULL,
-    JiraTransitionId TEXT NULL,
-    JiraTransitionName TEXT NULL,
-    IsActive INTEGER NOT NULL DEFAULT 1 CHECK (IsActive IN (0, 1))
-);
-
-INSERT INTO _SeedStatusMappings
-(
-    IssueTypeCode,
-    StandardStatus,
-    JiraStatusName,
-    JiraTransitionId,
-    JiraTransitionName,
-    IsActive
-)
-VALUES ('BUG', 'OPEN', 'To Do', NULL, NULL, 1);
-
-INSERT INTO _SeedStatusMappings
-(
-    IssueTypeCode,
-    StandardStatus,
-    JiraStatusName,
-    JiraTransitionId,
-    JiraTransitionName,
-    IsActive
-)
-VALUES ('BUG', 'IN_PROGRESS', 'In Progress', '31', 'Start Progress', 1);
-
-INSERT INTO _SeedStatusMappings
-(
-    IssueTypeCode,
-    StandardStatus,
-    JiraStatusName,
-    JiraTransitionId,
-    JiraTransitionName,
-    IsActive
-)
-VALUES ('BUG', 'WAITING', 'Waiting', '41', 'Waiting', 1);
-
-INSERT INTO _SeedStatusMappings
-(
-    IssueTypeCode,
-    StandardStatus,
-    JiraStatusName,
-    JiraTransitionId,
-    JiraTransitionName,
-    IsActive
-)
-VALUES ('BUG', 'DONE', 'Done', '51', 'Done', 1);
-
-INSERT INTO _SeedStatusMappings
-(
-    IssueTypeCode,
-    StandardStatus,
-    JiraStatusName,
-    JiraTransitionId,
-    JiraTransitionName,
-    IsActive
-)
-VALUES ('BUG', 'CANCELLED', 'Cancelled', '61', 'Cancel', 1);
-
--- Example product-level fallback status mapping.
--- Uncomment and edit if an issue type should inherit this mapping.
---
--- INSERT INTO _SeedStatusMappings
--- (
---     IssueTypeCode,
---     StandardStatus,
---     JiraStatusName,
---     JiraTransitionId,
---     JiraTransitionName,
---     IsActive
--- )
--- VALUES (NULL, 'DONE', 'Closed', '51', 'Close', 1);
-
--- ============================================================
--- APPLY SECTION - normally no need to edit below this line.
--- ============================================================
-
-UPDATE _SeedProduct
-SET ProductCode = UPPER(TRIM(ProductCode)),
-    ProductName = TRIM(ProductName),
-    JiraProjectKey = UPPER(TRIM(JiraProjectKey)),
-    JiraUsername = TRIM(JiraUsername),
-    JiraPassword = TRIM(JiraPassword);
-
-UPDATE _SeedIssueTypes
-SET IssueTypeCode = UPPER(TRIM(IssueTypeCode)),
-    JiraIssueTypeName = TRIM(JiraIssueTypeName);
-
-UPDATE _SeedFieldMappings
-SET IssueTypeCode = CASE
-        WHEN IssueTypeCode IS NULL OR TRIM(IssueTypeCode) = '' THEN NULL
-        ELSE UPPER(TRIM(IssueTypeCode))
-    END,
-    SourceField = TRIM(SourceField),
-    JiraField = TRIM(JiraField),
-    DefaultValue = NULLIF(TRIM(DefaultValue), '');
-
-UPDATE _SeedStatusMappings
-SET IssueTypeCode = CASE
-        WHEN IssueTypeCode IS NULL OR TRIM(IssueTypeCode) = '' THEN NULL
-        ELSE UPPER(TRIM(IssueTypeCode))
-    END,
-    StandardStatus = UPPER(TRIM(StandardStatus)),
-    JiraStatusName = TRIM(JiraStatusName),
-    JiraTransitionId = NULLIF(TRIM(JiraTransitionId), ''),
-    JiraTransitionName = NULLIF(TRIM(JiraTransitionName), '');
-
 INSERT INTO Products
-(
-    Code,
-    Name,
-    JiraProjectKey,
-    IsActive,
-    CreatedAt,
-    UpdatedAt
-)
-SELECT
-    ProductCode,
-    ProductName,
-    JiraProjectKey,
-    IsActive,
-    datetime('now'),
-    datetime('now')
-FROM _SeedProduct seed
-WHERE NOT EXISTS
-(
-    SELECT 1
-    FROM Products product
-    WHERE product.Code = seed.ProductCode
-);
+    (Code, Name, JiraProjectKey, JiraBaseUrl, JiraApiBasePath, JiraVersion, IsActive, CreatedAt, UpdatedAt)
+VALUES
+    ('EAS', 'EAS', 'EAS', 'https://jira.ezcloudhotel.com', '/rest/api/2', 'ServerV2', 1, datetime('now'), datetime('now'))
+ON CONFLICT(Code) DO UPDATE SET
+    Name            = excluded.Name,
+    JiraProjectKey  = excluded.JiraProjectKey,
+    JiraBaseUrl     = excluded.JiraBaseUrl,
+    JiraApiBasePath = excluded.JiraApiBasePath,
+    JiraVersion     = excluded.JiraVersion,
+    IsActive        = excluded.IsActive,
+    UpdatedAt       = datetime('now');
 
-UPDATE Products
-SET Name = (SELECT ProductName FROM _SeedProduct WHERE Id = 1),
-    JiraProjectKey = (SELECT JiraProjectKey FROM _SeedProduct WHERE Id = 1),
-    IsActive = (SELECT IsActive FROM _SeedProduct WHERE Id = 1),
-    UpdatedAt = datetime('now')
-WHERE Code = (SELECT ProductCode FROM _SeedProduct WHERE Id = 1);
-
-UPDATE JiraCredentials
-SET Username = (SELECT JiraUsername FROM _SeedProduct WHERE Id = 1),
-    Password = (SELECT JiraPassword FROM _SeedProduct WHERE Id = 1),
-    IsActive = 1,
-    UpdatedAt = datetime('now')
-WHERE ProductId =
-(
-    SELECT product.Id
-    FROM Products product
-    JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-)
-AND IsActive = 1;
+-- ============================================================
+-- 2) JIRA CREDENTIAL (Basic auth)
+--    No unique key -> replace the product's credentials.
+-- ============================================================
+DELETE FROM JiraCredentials
+WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS');
 
 INSERT INTO JiraCredentials
-(
-    ProductId,
-    Username,
-    Password,
-    IsActive,
-    CreatedAt,
-    UpdatedAt
-)
-SELECT
-    product.Id,
-    seed.JiraUsername,
-    seed.JiraPassword,
-    1,
-    datetime('now'),
-    datetime('now')
-FROM Products product
-JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-WHERE NOT EXISTS
-(
-    SELECT 1
-    FROM JiraCredentials credential
-    WHERE credential.ProductId = product.Id
-      AND credential.IsActive = 1
-);
+    (ProductId, AuthType, Username, PasswordOrToken, IsActive, CreatedAt, UpdatedAt)
+VALUES
+    ((SELECT Id FROM Products WHERE Code = 'EAS'), 'Basic', 'anh.phamviet', '123456Aa@', 1, datetime('now'), datetime('now'));
 
-UPDATE IssueTypeMappings
-SET JiraIssueTypeName =
-    (
-        SELECT seedIssueType.JiraIssueTypeName
-        FROM _SeedIssueTypes seedIssueType
-        WHERE seedIssueType.IssueTypeCode = IssueTypeMappings.IssueTypeCode
-    ),
-    IsActive =
-    (
-        SELECT seedIssueType.IsActive
-        FROM _SeedIssueTypes seedIssueType
-        WHERE seedIssueType.IssueTypeCode = IssueTypeMappings.IssueTypeCode
-    ),
-    UpdatedAt = datetime('now')
-WHERE ProductId =
-(
-    SELECT product.Id
-    FROM Products product
-    JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-)
-AND IssueTypeCode IN
-(
-    SELECT IssueTypeCode
-    FROM _SeedIssueTypes
-);
-
+-- ============================================================
+-- 3) ISSUE TYPE MAPPINGS
+--    Unique key: (ProductId, IssueTypeCode)
+-- ============================================================
 INSERT INTO IssueTypeMappings
-(
-    ProductId,
-    IssueTypeCode,
-    JiraIssueTypeName,
-    IsActive,
-    CreatedAt,
-    UpdatedAt
-)
-SELECT
-    product.Id,
-    seedIssueType.IssueTypeCode,
-    seedIssueType.JiraIssueTypeName,
-    seedIssueType.IsActive,
-    datetime('now'),
-    datetime('now')
-FROM _SeedIssueTypes seedIssueType
-CROSS JOIN _SeedProduct seed
-JOIN Products product ON product.Code = seed.ProductCode
-WHERE NOT EXISTS
-(
-    SELECT 1
-    FROM IssueTypeMappings issueType
-    WHERE issueType.ProductId = product.Id
-      AND issueType.IssueTypeCode = seedIssueType.IssueTypeCode
-);
+    (ProductId, IssueTypeCode, JiraIssueTypeId, JiraIssueTypeName, IsActive, CreatedAt, UpdatedAt)
+VALUES
+    ((SELECT Id FROM Products WHERE Code = 'EAS'), 'BUG',  NULL, 'Bug',  1, datetime('now'), datetime('now')),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'), 'TASK', NULL, 'Task', 1, datetime('now'), datetime('now'))
+ON CONFLICT(ProductId, IssueTypeCode) DO UPDATE SET
+    JiraIssueTypeId   = excluded.JiraIssueTypeId,
+    JiraIssueTypeName = excluded.JiraIssueTypeName,
+    IsActive          = excluded.IsActive,
+    UpdatedAt         = datetime('now');
 
-DELETE FROM FieldMappings
-WHERE ProductId =
-(
-    SELECT product.Id
-    FROM Products product
-    JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-)
-AND IssueTypeMappingId IS NULL
-AND SourceField IN
-(
-    SELECT SourceField
-    FROM _SeedFieldMappings
-    WHERE IssueTypeCode IS NULL
-);
+-- ============================================================
+-- 4) FIELD MAPPING TEMPLATES (one DEFAULT template per issue type)
+--    Unique key: (ProductId, IssueTypeMappingId, TemplateCode)
+-- ============================================================
+INSERT INTO IssueFieldMappingTemplates
+    (ProductId, IssueTypeMappingId, TemplateCode, Name, Description, IsDefault, IsActive, CreatedAt, UpdatedAt)
+VALUES
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DEFAULT', 'Default', 'Default field mapping template.', 1, 1, datetime('now'), datetime('now')),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'TASK'),
+     'DEFAULT', 'Default', 'Default field mapping template.', 1, 1, datetime('now'), datetime('now'))
+ON CONFLICT(ProductId, IssueTypeMappingId, TemplateCode) DO UPDATE SET
+    Name        = excluded.Name,
+    Description = excluded.Description,
+    IsDefault   = excluded.IsDefault,
+    IsActive    = excluded.IsActive,
+    UpdatedAt   = datetime('now');
 
-DELETE FROM FieldMappings
-WHERE ProductId =
-(
-    SELECT product.Id
-    FROM Products product
-    JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-)
-AND EXISTS
-(
-    SELECT 1
-    FROM _SeedFieldMappings seedField
-    JOIN IssueTypeMappings issueType
-      ON issueType.ProductId = FieldMappings.ProductId
-     AND issueType.IssueTypeCode = seedField.IssueTypeCode
-    WHERE seedField.IssueTypeCode IS NOT NULL
-      AND FieldMappings.IssueTypeMappingId = issueType.Id
-      AND FieldMappings.SourceField = seedField.SourceField
-);
+-- ============================================================
+-- 5) FIELD MAPPINGS (DEFAULT template of the BUG issue type)
+--    Unique key: (ProductId, IssueTypeMappingId, TemplateCode, SourcePath)
+--    ValueShape: 'raw' | 'name' | ...   ValueType: 'string' | ...
+-- ============================================================
+INSERT INTO IssueFieldMappings
+    (ProductId, IssueTypeMappingId, TemplateCode, SourcePath, JiraField, ValueType, ValueShape, IsRequired, DefaultValue, SortOrder, IsActive, TransformConfigJson, CreatedAt, UpdatedAt)
+VALUES
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DEFAULT', 'data.summary',       'summary',           'string', 'raw',  1, NULL, 10, 1, NULL, datetime('now'), datetime('now')),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DEFAULT', 'data.description',   'description',       'string', 'raw',  0, NULL, 20, 1, NULL, datetime('now'), datetime('now')),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DEFAULT', 'data.priority',      'priority',          'string', 'name', 0, NULL, 30, 1, NULL, datetime('now'), datetime('now')),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DEFAULT', 'data.customer.code', 'customfield_10010', 'string', 'raw',  0, NULL, 40, 1, NULL, datetime('now'), datetime('now')),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DEFAULT', 'data.ticket.url',    'customfield_10011', 'string', 'raw',  0, NULL, 50, 1, NULL, datetime('now'), datetime('now'))
+ON CONFLICT(ProductId, IssueTypeMappingId, TemplateCode, SourcePath) DO UPDATE SET
+    JiraField           = excluded.JiraField,
+    ValueType           = excluded.ValueType,
+    ValueShape          = excluded.ValueShape,
+    IsRequired          = excluded.IsRequired,
+    DefaultValue        = excluded.DefaultValue,
+    SortOrder           = excluded.SortOrder,
+    IsActive            = excluded.IsActive,
+    TransformConfigJson = excluded.TransformConfigJson,
+    UpdatedAt           = datetime('now');
 
-INSERT INTO FieldMappings
-(
-    ProductId,
-    IssueTypeMappingId,
-    SourceField,
-    JiraField,
-    IsRequired,
-    DefaultValue,
-    IsActive
-)
-SELECT
-    product.Id,
-    issueType.Id,
-    seedField.SourceField,
-    seedField.JiraField,
-    seedField.IsRequired,
-    seedField.DefaultValue,
-    seedField.IsActive
-FROM _SeedFieldMappings seedField
-CROSS JOIN _SeedProduct seed
-JOIN Products product ON product.Code = seed.ProductCode
-LEFT JOIN IssueTypeMappings issueType
-  ON issueType.ProductId = product.Id
- AND issueType.IssueTypeCode = seedField.IssueTypeCode
-WHERE seedField.IssueTypeCode IS NULL
-   OR issueType.Id IS NOT NULL;
-
-DELETE FROM StatusMappings
-WHERE ProductId =
-(
-    SELECT product.Id
-    FROM Products product
-    JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-)
-AND IssueTypeMappingId IS NULL
-AND StandardStatus IN
-(
-    SELECT StandardStatus
-    FROM _SeedStatusMappings
-    WHERE IssueTypeCode IS NULL
-);
-
-DELETE FROM StatusMappings
-WHERE ProductId =
-(
-    SELECT product.Id
-    FROM Products product
-    JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-)
-AND EXISTS
-(
-    SELECT 1
-    FROM _SeedStatusMappings seedStatus
-    JOIN IssueTypeMappings issueType
-      ON issueType.ProductId = StatusMappings.ProductId
-     AND issueType.IssueTypeCode = seedStatus.IssueTypeCode
-    WHERE seedStatus.IssueTypeCode IS NOT NULL
-      AND StatusMappings.IssueTypeMappingId = issueType.Id
-      AND StatusMappings.StandardStatus = seedStatus.StandardStatus
-);
-
+-- ============================================================
+-- 6) STATUS MAPPINGS (BUG issue type)
+--    Unique key: (ProductId, IssueTypeMappingId, StandardStatus, JiraStatusName)
+--    StandardStatus in: OPEN | IN_PROGRESS | WAITING | DONE | CANCELLED
+-- ============================================================
 INSERT INTO StatusMappings
-(
-    ProductId,
-    IssueTypeMappingId,
-    StandardStatus,
-    JiraStatusName,
-    JiraTransitionId,
-    JiraTransitionName,
-    IsActive
-)
-SELECT
-    product.Id,
-    issueType.Id,
-    seedStatus.StandardStatus,
-    seedStatus.JiraStatusName,
-    seedStatus.JiraTransitionId,
-    seedStatus.JiraTransitionName,
-    seedStatus.IsActive
-FROM _SeedStatusMappings seedStatus
-CROSS JOIN _SeedProduct seed
-JOIN Products product ON product.Code = seed.ProductCode
-LEFT JOIN IssueTypeMappings issueType
-  ON issueType.ProductId = product.Id
- AND issueType.IssueTypeCode = seedStatus.IssueTypeCode
-WHERE seedStatus.IssueTypeCode IS NULL
-   OR issueType.Id IS NOT NULL;
+    (ProductId, IssueTypeMappingId, StandardStatus, JiraStatusName, JiraTransitionId, JiraTransitionName, IsActive)
+VALUES
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'OPEN',        'To Do',       NULL, NULL,             1),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'IN_PROGRESS', 'In Progress', '31', 'Start Progress', 1),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'WAITING',     'Waiting',     '41', 'Waiting',        1),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'DONE',        'Done',        '51', 'Done',           1),
+    ((SELECT Id FROM Products WHERE Code = 'EAS'),
+     (SELECT Id FROM IssueTypeMappings WHERE ProductId = (SELECT Id FROM Products WHERE Code = 'EAS') AND IssueTypeCode = 'BUG'),
+     'CANCELLED',   'Cancelled',   '61', 'Cancel',         1)
+ON CONFLICT(ProductId, IssueTypeMappingId, StandardStatus, JiraStatusName) DO UPDATE SET
+    JiraTransitionId   = excluded.JiraTransitionId,
+    JiraTransitionName = excluded.JiraTransitionName,
+    IsActive           = excluded.IsActive;
 
 COMMIT;
 
--- Verification output. Password is not printed.
-SELECT
-    'Product' AS Section,
-    product.Id,
-    product.Code,
-    product.Name,
-    product.JiraProjectKey,
-    product.IsActive
-FROM Products product
-JOIN _SeedProduct seed ON seed.ProductCode = product.Code;
+-- ============================================================
+-- VERIFICATION (password length only, not the value)
+-- ============================================================
+SELECT 'Product' AS Section, Id, Code, Name, JiraProjectKey, JiraBaseUrl, JiraVersion, IsActive
+FROM Products WHERE Code = 'EAS';
 
-SELECT
-    'JiraCredential' AS Section,
-    credential.Id,
-    product.Code AS ProductCode,
-    credential.Username,
-    length(credential.Password) AS PasswordLength,
-    credential.IsActive
-FROM JiraCredentials credential
-JOIN Products product ON product.Id = credential.ProductId
-JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-WHERE credential.IsActive = 1;
+SELECT 'JiraCredential' AS Section, c.Id, p.Code AS ProductCode, c.AuthType, c.Username, length(c.PasswordOrToken) AS PasswordLength, c.IsActive
+FROM JiraCredentials c JOIN Products p ON p.Id = c.ProductId WHERE p.Code = 'EAS';
 
-SELECT
-    'IssueType' AS Section,
-    issueType.Id,
-    product.Code AS ProductCode,
-    issueType.IssueTypeCode,
-    issueType.JiraIssueTypeName,
-    issueType.IsActive
-FROM IssueTypeMappings issueType
-JOIN Products product ON product.Id = issueType.ProductId
-JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-ORDER BY issueType.IssueTypeCode;
+SELECT 'IssueType' AS Section, it.Id, p.Code AS ProductCode, it.IssueTypeCode, it.JiraIssueTypeName, it.IsActive
+FROM IssueTypeMappings it JOIN Products p ON p.Id = it.ProductId WHERE p.Code = 'EAS'
+ORDER BY it.IssueTypeCode;
 
-SELECT
-    'FieldMapping' AS Section,
-    fieldMapping.Id,
-    product.Code AS ProductCode,
-    issueType.IssueTypeCode,
-    fieldMapping.SourceField,
-    fieldMapping.JiraField,
-    fieldMapping.IsRequired,
-    fieldMapping.DefaultValue,
-    fieldMapping.IsActive
-FROM FieldMappings fieldMapping
-JOIN Products product ON product.Id = fieldMapping.ProductId
-JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-LEFT JOIN IssueTypeMappings issueType ON issueType.Id = fieldMapping.IssueTypeMappingId
-ORDER BY issueType.IssueTypeCode, fieldMapping.SourceField;
+SELECT 'Template' AS Section, t.Id, p.Code AS ProductCode, it.IssueTypeCode, t.TemplateCode, t.Name, t.IsDefault, t.IsActive
+FROM IssueFieldMappingTemplates t
+JOIN Products p ON p.Id = t.ProductId
+JOIN IssueTypeMappings it ON it.Id = t.IssueTypeMappingId
+WHERE p.Code = 'EAS' ORDER BY it.IssueTypeCode, t.TemplateCode;
 
-SELECT
-    'StatusMapping' AS Section,
-    statusMapping.Id,
-    product.Code AS ProductCode,
-    issueType.IssueTypeCode,
-    statusMapping.StandardStatus,
-    statusMapping.JiraStatusName,
-    statusMapping.JiraTransitionId,
-    statusMapping.JiraTransitionName,
-    statusMapping.IsActive
-FROM StatusMappings statusMapping
-JOIN Products product ON product.Id = statusMapping.ProductId
-JOIN _SeedProduct seed ON seed.ProductCode = product.Code
-LEFT JOIN IssueTypeMappings issueType ON issueType.Id = statusMapping.IssueTypeMappingId
-ORDER BY issueType.IssueTypeCode, statusMapping.StandardStatus;
+SELECT 'FieldMapping' AS Section, f.Id, p.Code AS ProductCode, it.IssueTypeCode, f.TemplateCode, f.SourcePath, f.JiraField, f.ValueType, f.ValueShape, f.IsRequired, f.SortOrder, f.IsActive
+FROM IssueFieldMappings f
+JOIN Products p ON p.Id = f.ProductId
+LEFT JOIN IssueTypeMappings it ON it.Id = f.IssueTypeMappingId
+WHERE p.Code = 'EAS' ORDER BY it.IssueTypeCode, f.SortOrder;
+
+SELECT 'StatusMapping' AS Section, s.Id, p.Code AS ProductCode, it.IssueTypeCode, s.StandardStatus, s.JiraStatusName, s.JiraTransitionId, s.JiraTransitionName, s.IsActive
+FROM StatusMappings s
+JOIN Products p ON p.Id = s.ProductId
+LEFT JOIN IssueTypeMappings it ON it.Id = s.IssueTypeMappingId
+WHERE p.Code = 'EAS' ORDER BY it.IssueTypeCode, s.StandardStatus;
